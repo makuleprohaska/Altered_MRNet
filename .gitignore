@@ -1,0 +1,12 @@
+#Git ignore file
+
+#ignore data files ending in this
+*.csv
+*.npy
+
+#ignore file where all the data is stored
+MRNet-v1.0/
+MRNet-v1.0.zip/
+
+
+

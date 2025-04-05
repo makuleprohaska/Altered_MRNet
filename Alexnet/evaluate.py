@@ -107,3 +107,9 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
 if __name__ == '__main__':
     args = get_parser().parse_args()
     evaluate(args.split, args.model_path, args.diagnosis, args.gpu, args.mps, args.data_dir, args.labels_csv)
+
+#to run use
+"""
+python train.py --epochs 20 --data_dir /Users/matteobruno/Desktop/train \
+                --labels_csv /Users/matteobruno/Desktop/train/train-abnormal.csv --mps --rundir runs --diagnosis 0
+"""

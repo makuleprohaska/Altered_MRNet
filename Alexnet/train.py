@@ -63,7 +63,7 @@ def train(rundir, diagnosis, epochs, learning_rate, use_gpu, use_mps, data_dir, 
 def train3(rundir, diagnosis, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    train_loader, valid_loader, test_loader = load_data3(diagnosis, device, data_dir, labels_csv)
+    train_loader, valid_loader = load_data3(diagnosis, device, data_dir, labels_csv)
     
     model = MRNet3()
     model = model.to(device)

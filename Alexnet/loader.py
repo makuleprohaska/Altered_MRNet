@@ -140,15 +140,15 @@ def load_data3(diagnosis, device, data_dir, labels_csv):
     all_files = [f for f in all_files if f in labels_dict]
     all_files.sort()
 
-    train_files, temp_files = train_test_split(all_files, test_size=0.4, random_state=42)
-    valid_files, test_files = train_test_split(temp_files, test_size=0.5, random_state=42)
+    train_files, valid_files = train_test_split(all_files, test_size=0.2, random_state=42)
+    #valid_files, test_files = train_test_split(temp_files, test_size=0.5, random_state=42)
 
     train_dataset = Dataset3(data_dir, train_files, labels_dict, diagnosis, device)
     valid_dataset = Dataset3(data_dir, valid_files, labels_dict, diagnosis, device)
-    test_dataset = Dataset3(data_dir, test_files, labels_dict, diagnosis, device)
+    #test_dataset = Dataset3(data_dir, test_files, labels_dict, diagnosis, device)
 
     train_loader = data.DataLoader(train_dataset, batch_size=1, num_workers=0, shuffle=True)
     valid_loader = data.DataLoader(valid_dataset, batch_size=1, num_workers=0, shuffle=False)
-    test_loader = data.DataLoader(test_dataset, batch_size=1, num_workers=0, shuffle=False)
+    #test_loader = data.DataLoader(test_dataset, batch_size=1, num_workers=0, shuffle=False)
 
-    return train_loader, valid_loader, test_loader
+    return train_loader, valid_loader

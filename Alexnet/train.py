@@ -131,3 +131,9 @@ if __name__ == '__main__':
 
     train3(args.rundir, args.diagnosis, args.epochs, args.learning_rate, 
           args.gpu, args.mps, args.data_dir, args.labels_csv)
+
+#to run use
+"""
+python train.py --epochs 20 --data_dir /Users/matteobruno/Desktop/train \
+                --labels_csv /Users/matteobruno/Desktop/train/train-abnormal.csv --mps --rundir runs --diagnosis 0
+"""

@@ -27,7 +27,8 @@ class MRNet3(nn.Module):
         self.model3 = models.alexnet(pretrained=True)
         self.gap = nn.AdaptiveAvgPool2d(1)
         
-        self.classifier1 = nn.Linear(int(256*3), 256, dropout=0.5)
+        self.classifier1 = nn.Linear(int(256*3), 256)
+        self.dropout = nn.Dropout(p=0.5)
         self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 
@@ -57,6 +58,7 @@ class MRNet3(nn.Module):
         x_stacked = torch.cat((x_1, x_2, x_3), dim=1)
         
         x_stacked = self.classifier1(x_stacked)
+        x_stacked = self.dropout(x_stacked)
         x_stacked = self.activation(x_stacked)
         x_stacked = self.classifier2(x_stacked)
         #x_stacked = self.classifier(x_stacked)

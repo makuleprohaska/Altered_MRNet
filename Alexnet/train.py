@@ -134,6 +134,8 @@ if __name__ == '__main__':
 
 #to run use
 """
-python train.py --epochs 20 --data_dir /Users/matteobruno/Desktop/train \
-                --labels_csv /Users/matteobruno/Desktop/train/train-abnormal.csv --mps --rundir runs --diagnosis 0
+python train.py --epochs 5 \
+--data_dir /Users/matteobruno/Desktop/train \
+--labels_csv /Users/matteobruno/Desktop/train/train-abnormal.csv \
+--mps --rundir /Users/matteobruno/Desktop/runs --diagnosis 0
 """

@@ -11,3 +11,6 @@ MRNet-v1.0.zip/
 
 
 MRNet-v1.0.zip
+.DS_Store
+.DS_Store
+*.ipynb

@@ -1,30 +1,15 @@
 import torch
 import torch.nn as nn
-
 from torchvision import models
-
-# class MRNet(nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#         self.model = models.alexnet(pretrained=True)
-#         self.gap = nn.AdaptiveAvgPool2d(1)
-#         self.classifier = nn.Linear(256, 1)
-
-#     def forward(self, x):
-#         x = torch.squeeze(x, dim=0) # only batch size 1 supported
-#         x = self.model.features(x)
-#         x = self.gap(x).view(x.size(0), -1)
-#         x = torch.max(x, 0, keepdim=True)[0]
-#         x = self.classifier(x)
-#         return x
+from torchvision.models import AlexNet_Weights
 
 class MRNet3(nn.Module):
     
     def __init__(self):
         super().__init__()
-        self.model1 = models.alexnet(pretrained=True)
-        self.model2 = models.alexnet(pretrained=True)
-        self.model3 = models.alexnet(pretrained=True)
+        self.model1 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
+        self.model2 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
+        self.model3 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.gap = nn.AdaptiveAvgPool2d(1)
         
         self.classifier1 = nn.Linear(int(256*3), 256)

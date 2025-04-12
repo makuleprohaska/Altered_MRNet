@@ -7,8 +7,8 @@ import torch
 from sklearn import metrics
 from torch.autograd import Variable
 
-from loader import load_data
-from model import MRNet
+#from loader import load_data3
+#from model import MRNet
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -77,32 +77,34 @@ def run_model(model, loader, train=False, optimizer=None):
 
     return avg_loss, auc, preds, labels
 
-def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv):
-    device = get_device(use_gpu, use_mps)
-    print(f"Using device: {device}")
-    train_loader, valid_loader, test_loader = load_data(diagnosis, device, data_dir, labels_csv)
+#TO BE MODIFIED TO USE THE MRNET3 MODEL
 
-    model = MRNet()
-    state_dict = torch.load(model_path, map_location=device)
-    model.load_state_dict(state_dict)
+# def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv):
+#     device = get_device(use_gpu, use_mps)
+#     print(f"Using device: {device}")
+#     train_loader, valid_loader, test_loader = load_data(diagnosis, device, data_dir, labels_csv)
 
-    model = model.to(device)
+#     model = MRNet()
+#     state_dict = torch.load(model_path, map_location=device)
+#     model.load_state_dict(state_dict)
 
-    if split == 'train':
-        loader = train_loader
-    elif split == 'valid':
-        loader = valid_loader
-    elif split == 'test':
-        loader = test_loader
-    else:
-        raise ValueError("split must be 'train', 'valid', or 'test'")
+#     model = model.to(device)
 
-    loss, auc, preds, labels = run_model(model, loader)
+#     if split == 'train':
+#         loader = train_loader
+#     elif split == 'valid':
+#         loader = valid_loader
+#     elif split == 'test':
+#         loader = test_loader
+#     else:
+#         raise ValueError("split must be 'train', 'valid', or 'test'")
 
-    print(f'{split} loss: {loss:0.4f}')
-    print(f'{split} AUC: {auc:0.4f}')
+#     loss, auc, preds, labels = run_model(model, loader)
 
-    return preds, labels
+#     print(f'{split} loss: {loss:0.4f}')
+#     print(f'{split} AUC: {auc:0.4f}')
+
+#     return preds, labels
 
 if __name__ == '__main__':
     args = get_parser().parse_args()

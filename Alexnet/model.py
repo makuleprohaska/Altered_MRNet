@@ -3,20 +3,20 @@ import torch.nn as nn
 
 from torchvision import models
 
-class MRNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.model = models.alexnet(pretrained=True)
-        self.gap = nn.AdaptiveAvgPool2d(1)
-        self.classifier = nn.Linear(256, 1)
+# class MRNet(nn.Module):
+#     def __init__(self):
+#         super().__init__()
+#         self.model = models.alexnet(pretrained=True)
+#         self.gap = nn.AdaptiveAvgPool2d(1)
+#         self.classifier = nn.Linear(256, 1)
 
-    def forward(self, x):
-        x = torch.squeeze(x, dim=0) # only batch size 1 supported
-        x = self.model.features(x)
-        x = self.gap(x).view(x.size(0), -1)
-        x = torch.max(x, 0, keepdim=True)[0]
-        x = self.classifier(x)
-        return x
+#     def forward(self, x):
+#         x = torch.squeeze(x, dim=0) # only batch size 1 supported
+#         x = self.model.features(x)
+#         x = self.gap(x).view(x.size(0), -1)
+#         x = torch.max(x, 0, keepdim=True)[0]
+#         x = self.classifier(x)
+#         return x
 
 class MRNet3(nn.Module):
     
@@ -43,7 +43,7 @@ class MRNet3(nn.Module):
         x_1 = torch.squeeze(x_1, dim=0) # only batch size 1 supported
         x_1 = self.model1.features(x_1)
         x_1 = self.gap(x_1).view(x_1.size(0), -1)
-        x_1 = torch.max(x_1, 0, keepdim=True)[0]
+        x_1 = torch.max(x_1, 0, keepdim=True)[0]    #grok said this is redundant, check
         
         x_2 = torch.squeeze(x_2, dim=0) # only batch size 1 supported
         x_2 = self.model2.features(x_2)

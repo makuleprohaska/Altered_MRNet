@@ -86,7 +86,8 @@ def load_data3(device, data_dir, labels_csv):
         all_files, 
         test_size=0.2, 
         random_state=42, 
-        stratify=labels
+        stratify=labels,
+        ranom_state=40
     )
 
     train_dataset = Dataset3(data_dir, train_files, labels_dict, device)

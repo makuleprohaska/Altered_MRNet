@@ -8,8 +8,8 @@ from sklearn import metrics
 from torch.autograd import Variable
 from tqdm import tqdm
 
-from loader import load_data3  # Make sure you have load_data3 for MRNet3
-from model import MRNet3  # Import MRNet3 model
+from loader import load_data3
+from model import MRNet3
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -33,66 +33,47 @@ def get_parser():
 def run_model(model, loader, train=False, optimizer=None):
     preds = []
     labels = []
-
     if train:
         model.train()
     else:
         model.eval()
-
     total_loss = 0.
     num_batches = 0
     print(f"num_batches: {len(loader)}")
     for batch in tqdm(loader, desc="Processing batches", total=len(loader)):
         if train:
             optimizer.zero_grad()
-
         vol, label = batch[0], batch[1]
-        
-        # Move volume and label to the correct device
         vol_device = []
         for i in vol:
             i = i.to(loader.dataset.device)
             vol_device.append(i)
         label = label.to(loader.dataset.device)
-
         logit = model.forward(vol_device)
         loss = loader.dataset.weighted_loss(logit, label)
         total_loss += loss.item()
-
         pred = torch.sigmoid(logit)
-        pred_npy = pred.data.cpu().numpy()[0][0]
-        label_npy = label.data.cpu().numpy()[0][0]
-
-        preds.append(pred_npy)
-        labels.append(label_npy)
-
+        pred_npy = pred.data.cpu().numpy()[:, 0]  # (batch_size,)
+        label_npy = label.data.cpu().numpy()[:, 0]  # (batch_size,)
+        preds.extend(pred_npy.tolist())
+        labels.extend(label_npy.tolist())
         if train:
             loss.backward()
             optimizer.step()
         num_batches += 1
-
     avg_loss = total_loss / num_batches
-
     fpr, tpr, threshold = metrics.roc_curve(labels, preds)
     auc = metrics.auc(fpr, tpr)
-
     return avg_loss, auc, preds, labels
 
 def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv):
-    # Set up the device and load the data
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    
-    # Assuming 'load_data3' handles the diagnosis filtering
     train_loader, valid_loader, test_loader = load_data3(device, data_dir, labels_csv, diagnosis)
-
-    # Initialize the model (MRNet3)
     model = MRNet3()
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
     model = model.to(device)
-
-    # Choose the loader based on the 'split' argument
     if split == 'train':
         loader = train_loader
     elif split == 'valid':
@@ -101,13 +82,9 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
         loader = test_loader
     else:
         raise ValueError("split must be 'train', 'valid', or 'test'")
-
-    # Run the model for evaluation
     loss, auc, preds, labels = run_model(model, loader, train=False)
-
-    print(f'{split} loss: {loss:0.4f}')
-    print(f'{split} AUC: {auc:0.4f}')
-
+    print(f'{split} loss: {loss:.4f}')
+    print(f'{split} AUC: {auc:.4f}')
     return preds, labels
 
 if __name__ == '__main__':

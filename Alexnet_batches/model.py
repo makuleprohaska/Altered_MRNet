@@ -22,38 +22,33 @@ class MRNet3(nn.Module):
         self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 
-        #self.classifier =  nn.Linear(int(256*3), 1)
-
     def forward(self, x):
+        x_1, x_2, x_3 = x[0], x[1], x[2]  # Each: (batch, slices, 3, 224, 224)
         
-        x_1 = x[0]
-        x_2 = x[1]
-        x_3 = x[2]
-        
-        x_1 = torch.squeeze(x_1, dim=0) # only batch size 1 supported
+        batch_size, slices, c, h, w = x_1.size()
+        x_1 = x_1.view(batch_size * slices, c, h, w)  # (batch*slices, 3, 224, 224)
         x_1 = self.model1.features(x_1)
-        x_1 = self.gap(x_1).view(x_1.size(0), -1)
-        x_1 = torch.max(x_1, 0, keepdim=True)[0]    #grok said this is redundant, check
-        x_1 = self.dropout_view1(x_1)  # Apply dropout to view features
+        x_1 = self.gap(x_1).view(batch_size, slices, 256)  # (batch, slices, 256)
+        x_1 = torch.max(x_1, 1)[0]  # (batch, 256)
+        x_1 = self.dropout_view1(x_1)
 
-        x_2 = torch.squeeze(x_2, dim=0) # only batch size 1 supported
+        x_2 = x_2.view(batch_size * slices, c, h, w)
         x_2 = self.model2.features(x_2)
-        x_2 = self.gap(x_2).view(x_2.size(0), -1)
-        x_2 = torch.max(x_2, 0, keepdim=True)[0]
+        x_2 = self.gap(x_2).view(batch_size, slices, 256)
+        x_2 = torch.max(x_2, 1)[0]
         x_2 = self.dropout_view2(x_2)
 
-        x_3 = torch.squeeze(x_3, dim=0) # only batch size 1 supported
+        x_3 = x_3.view(batch_size * slices, c, h, w)
         x_3 = self.model3.features(x_3)
-        x_3 = self.gap(x_3).view(x_3.size(0), -1)
-        x_3 = torch.max(x_3, 0, keepdim=True)[0]
+        x_3 = self.gap(x_3).view(batch_size, slices, 256)
+        x_3 = torch.max(x_3, 1)[0]
         x_3 = self.dropout_view3(x_3)
         
-        x_stacked = torch.cat((x_1, x_2, x_3), dim=1)
+        x_stacked = torch.cat((x_1, x_2, x_3), dim=1)  # (batch, 768)
         
         x_stacked = self.classifier1(x_stacked)
         x_stacked = self.dropout(x_stacked)
         x_stacked = self.activation(x_stacked)
-        x_stacked = self.classifier2(x_stacked)
-        #x_stacked = self.classifier(x_stacked)
+        x_stacked = self.classifier2(x_stacked)  # (batch, 1)
         
-        return x_stacked 
+        return x_stacked

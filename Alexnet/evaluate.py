@@ -6,6 +6,7 @@ import torch
 
 from sklearn import metrics
 from torch.autograd import Variable
+from tqdm import tqdm
 
 #from loader import load_data3
 #from model import MRNet
@@ -41,7 +42,7 @@ def run_model(model, loader, train=False, optimizer=None):
     total_loss = 0.
     num_batches = 0
     print(f"num_batches: {len(loader)}")
-    for batch in loader:
+    for batch in tqdm(loader, desc="Processing batches", total=len(loader)):
         if train:
             optimizer.zero_grad()
 

@@ -7,8 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from sklearn import metrics
 
-from loader import load_data3  # Adapted dataset code with INPUT_DIM=260
-from model import MRNet3  # Adapted MRNet3 with EfficientNet-B2
+from evaluate import run_model
+from loader import load_data3
+from model import MRNet3  # Assumes MRNet3 is adapted to use EfficientNet-B2
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -18,59 +19,15 @@ def get_device(use_gpu, use_mps):
     else:
         return torch.device("cpu")
 
-def run_model(model, data_loader, train=False, optimizer=None):
-    if train:
-        model.train()
-    else:
-        model.eval()
-    
-    total_loss = 0.0
-    all_preds = []
-    all_labels = []
-    correct = 0
-    total = 0
-    
-    with torch.set_grad_enabled(train):
-        for data, target in data_loader:
-            data = [d.to(device) for d in data]  # Move each view to device
-            target = target.to(device)
-            
-            # Forward pass
-            output = model(data)  # Single logit
-            loss = data_loader.dataset.weighted_loss(output, target)
-            
-            if train:
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-            
-            total_loss += loss.item()
-            
-            # Compute predictions for metrics
-            pred_prob = torch.sigmoid(output).cpu().numpy()
-            pred_label = (pred_prob >= 0.5).astype(int)
-            
-            all_preds.append(pred_prob.item())
-            all_labels.append(target.cpu().numpy().item())
-            
-            correct += (pred_label == target.cpu().numpy()).sum()
-            total += 1
-    
-    avg_loss = total_loss / len(data_loader)
-    accuracy = correct / total
-    auc = metrics.roc_auc_score(all_labels, all_preds) if len(set(all_labels)) > 1 else float('nan')
-    
-    return avg_loss, auc, accuracy, all_preds
-
 def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     train_loader, valid_loader = load_data3(device, data_dir, labels_csv)
     
-    model = MRNet3()
+    model = MRNet3()  # MRNet3 with EfficientNet-B2
     model = model.to(device)
 
-    # Adjusted learning rate and weight decay for EfficientNet-B2
+    # Adjusted for EfficientNet-B2
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.02)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=0.3, threshold=1e-4)
 
@@ -79,23 +36,21 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
     for epoch in range(epochs):
         change = datetime.now() - start_time
-        print(f'starting epoch {epoch+1}. time passed: {str(change)}')
+        print('starting epoch {}. time passed: {}'.format(epoch+1, str(change)))
         
-        train_loss, train_auc, train_acc, _ = run_model(model, train_loader, train=True, optimizer=optimizer)
-        print(f'train loss: {train_loss:.4f}')
-        print(f'train AUC: {train_auc:.4f}')
-        print(f'train accuracy: {train_acc:.4f}')
+        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer)
+        print(f'train loss: {train_loss:0.4f}')
+        print(f'train AUC: {train_auc:0.4f}')
 
-        val_loss, val_auc, val_acc, _ = run_model(model, valid_loader)
-        print(f'valid loss: {val_loss:.4f}')
-        print(f'valid AUC: {val_auc:.4f}')
-        print(f'valid accuracy: {val_acc:.4f}')
+        val_loss, val_auc, _, _ = run_model(model, valid_loader)
+        print(f'valid loss: {val_loss:0.4f}')
+        print(f'valid AUC: {val_auc:0.4f}')
 
         scheduler.step(val_loss)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            file_name = f'val{val_loss:.4f}_train{train_loss:.4f}_epoch{epoch+1}'
+            file_name = f'val{val_loss:0.4f}_train{train_loss:0.4f}_epoch{epoch+1}'
             save_path = Path(rundir) / file_name
             torch.save(model.state_dict(), save_path)
 
@@ -108,7 +63,7 @@ def get_parser():
     parser.add_argument('--gpu', action='store_true', help='Use CUDA if available')
     parser.add_argument('--mps', action='store_true', help='Use MPS if available')
     parser.add_argument('--learning_rate', default=3e-5, type=float)  # Lower for EfficientNet-B2
-    parser.add_argument('--weight_decay', default=0.02, type=float)  # Slightly higher for deeper model
+    parser.add_argument('--weight_decay', default=0.02, type=float)  # Adjusted for EfficientNet-B2
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)

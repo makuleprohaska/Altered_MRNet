@@ -3,11 +3,9 @@ import json
 import numpy as np
 import os
 import torch
-
 from datetime import datetime
 from pathlib import Path
 from sklearn import metrics
-
 from evaluate import run_model
 from loader import load_data3
 from model import MRNet3
@@ -19,7 +17,6 @@ def get_device(use_gpu, use_mps):
         return torch.device("mps")
     else:
         return torch.device("cpu")
-
 
 def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv):
     device = get_device(use_gpu, use_mps)
@@ -52,12 +49,13 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-
             file_name = f'val{val_loss:0.4f}_train{train_loss:0.4f}_epoch{epoch+1}'
             save_path = Path(rundir) / file_name
             torch.save(model.state_dict(), save_path)
 
-###
+        # Log metrics to file
+        with open(os.path.join(rundir, 'metrics.txt'), 'a') as f:
+            f.write(f"Epoch {epoch+1}: train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, train_auc={train_auc:.4f}, val_auc={val_auc:.4f}\n")
 
 def get_parser():
     parser = argparse.ArgumentParser()
@@ -90,12 +88,4 @@ if __name__ == '__main__':
         json.dump(vars(args), out, indent=4)
 
     train3(args.rundir, args.epochs, args.learning_rate, 
-          args.gpu, args.mps, args.data_dir, args.labels_csv)
-
-#to run use
-"""
-python train.py --epochs 5 \
---data_dir /Users/matteobruno/Desktop/train \
---labels_csv /Users/matteobruno/Desktop/train/train-abnormal.csv \
---mps --rundir /Users/matteobruno/Desktop/runs --diagnosis 0
-"""
+           args.gpu, args.mps, args.data_dir, args.labels_csv)

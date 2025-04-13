@@ -11,6 +11,7 @@ MAX_PIXEL_VAL = 255
 MEAN = 58.09
 STDDEV = 49.73
 
+###This part was added to try with the MRNet3 model
 class Dataset3(data.Dataset):
     def __init__(self, data_dir, file_list, labels_dict, device):
         super().__init__()
@@ -38,39 +39,60 @@ class Dataset3(data.Dataset):
 
     def __getitem__(self, index):
         vol_list = []
+
         for i in range(3):           
             path = self.paths[i][index]
             vol = np.load(path).astype(np.int32)
+
             pad = int((vol.shape[2] - INPUT_DIM) / 2)
             vol = vol[:, pad:-pad, pad:-pad]
+
             vol = (vol - np.min(vol)) / (np.max(vol) - np.min(vol)) * MAX_PIXEL_VAL
             vol = (vol - MEAN) / STDDEV
             vol = np.stack((vol,) * 3, axis=1)
+
             vol_tensor = torch.FloatTensor(vol).to(self.device)
+
+
             vol_list.append(vol_tensor)
+
+        
         label_tensor = torch.FloatTensor([self.labels[index]]).to(self.device)
+
         return vol_list, label_tensor
 
     def __len__(self):
         return len(self.labels)
 
-def load_data3(device, data_dir, labels_csv, diagnosis=0):
+
+def load_data3(device, data_dir, labels_csv):
+    # Read the CSV without a header, assign column names
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
+    # Add leading zeros to match the .npy filenames (e.g., 0 -> 0000.npy)
     labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
     labels_dict = dict(zip(labels_df['filename'], labels_df['label']))
+
+    # List all .npy files in the data directory
     all_files = [f for f in os.listdir(f"{data_dir}/axial") if f.endswith(".npy")]
+    # Filter to only include files that have labels
     all_files = [f for f in all_files if f in labels_dict]
     all_files.sort()
+
+    # Extract labels for stratification
     labels = [labels_dict[file] for file in all_files]
+
+    # Split the data with stratification
     train_files, valid_files = train_test_split(
         all_files, 
         test_size=0.2, 
         random_state=42, 
         stratify=labels
     )
+
     train_dataset = Dataset3(data_dir, train_files, labels_dict, device)
     valid_dataset = Dataset3(data_dir, valid_files, labels_dict, device)
-    train_loader = data.DataLoader(train_dataset, batch_size=4, num_workers=2, shuffle=True, pin_memory=device.type == 'cuda')
-    valid_loader = data.DataLoader(valid_dataset, batch_size=4, num_workers=2, shuffle=False, pin_memory=device.type == 'cuda')
-    print(f"Training samples: {len(train_dataset)}, Validation samples: {len(valid_dataset)}")
+
+    train_loader = data.DataLoader(train_dataset, batch_size=1, num_workers=0, shuffle=True)
+    valid_loader = data.DataLoader(valid_dataset, batch_size=1, num_workers=0, shuffle=False)
+
     return train_loader, valid_loader

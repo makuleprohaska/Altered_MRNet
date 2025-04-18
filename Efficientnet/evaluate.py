@@ -21,7 +21,7 @@ def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, required=True)
     parser.add_argument('--split', type=str, required=True, choices=['train', 'valid', 'test'])
-    parser.add_argument('--diagnosis', type=int, required=True)
+    #parser.add_argument('--diagnosis', type=int, required=True)
     parser.add_argument('--data_dir', type=str, required=True, help='Directory containing .npy files')
     parser.add_argument('--labels_csv', type=str, required=True, help='Path to labels CSV file')
     parser.add_argument('--gpu', action='store_true', help='Use CUDA if available')
@@ -80,13 +80,13 @@ def run_model(model, loader, train=False, optimizer=None):
 
     return avg_loss, auc, preds, labels
 
-def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv):
+def evaluate(split, model_path, use_gpu, use_mps, data_dir, labels_csv):
     # Set up the device
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     
     # Load data with updated load_data3 (now returns train, valid, test)
-    train_loader, valid_loader, test_loader = load_data3(device, data_dir, labels_csv, diagnosis)
+    train_loader, valid_loader, test_loader = load_data3(device, data_dir, labels_csv)
 
     # Initialize the model (MRNet3 with EfficientNet-B2)
     model = MRNet3()
@@ -114,4 +114,4 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    evaluate(args.split, args.model_path, args.diagnosis, args.gpu, args.mps, args.data_dir, args.labels_csv)
+    evaluate(args.split, args.model_path, args.gpu, args.mps, args.data_dir, args.labels_csv)

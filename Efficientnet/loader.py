@@ -41,7 +41,7 @@ class MRDataset(data.Dataset):
 
         for i in range(3):           
             path = self.paths[i][index]
-            vol = np.load(path).astype(np.float32)  # Shape: (slices, H, W), slices varies
+            vol = np.load(path).astype(np.float32)    #Change it back to float 32 to run it on the virtual machine
 
             # Crop to INPUT_DIM x INPUT_DIM (260x260)
             pad = int((vol.shape[2] - INPUT_DIM) / 2)
@@ -76,7 +76,7 @@ class MRDataset(data.Dataset):
     def __len__(self):
         return len(self.labels)
 
-def load_data3(device, data_dir, labels_csv, diagnosis=0):
+def load_data3(device, data_dir, labels_csv):
     # Read the CSV without a header, assign column names
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
     # Add leading zeros to match .npy filenames (e.g., 0 -> 0000.npy)

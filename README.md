@@ -16,7 +16,7 @@ The advancement of deep learning has significantly impacted numerous fields, wit
 
 This study aims to investigate the effectiveness of convolutional neural networks (CNNs) in detecting anterior cruciate ligament (ACL) and meniscus tears from MRI data. The dataset we are using stems from a Stanford research paper that proposed an AlexNet-based architecture for this task (MRNet) and includes multiple slices from three different points of view (axial, sagittal, and coronal) for each unique sample.
 
-Our approach involves re-implementing this model — with minor modifications and hyperparameter tuning — as a performance baseline. We then evaluate whether modern CNN architectures can offer improved accuracy and robustness.
+Our approach involves re-implementing this model — with minor modifications and hyperparameter tuning — as a performance baseline. We then evaluate whether modern CNN architectures can offer improved accuracy and robustness. Finally we combine our three CNN architectures (AlexNet, ResNet, EfficientNet) with an ensemble model to produce a final output.
 
 ## Dataset
 

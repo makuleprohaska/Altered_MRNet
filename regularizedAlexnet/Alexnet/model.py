@@ -10,16 +10,16 @@ class MRNet3(nn.Module):
         self.model1 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.model2 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.model3 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
-        self.gap = nn.AdaptiveAvgPool2d(1)
+        self.gap = nn.AdaptiveAvgPool2d(1) #max pooling? 
         
         # Add dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.4)
+        self.dropout_view1 = nn.Dropout(p=0.4) # would reduce these
         self.dropout_view2 = nn.Dropout(p=0.4)
         self.dropout_view3 = nn.Dropout(p=0.4)
 
         self.classifier1 = nn.Sequential(
             nn.Linear(256 * 3, 256),
-             nn.GroupNorm(num_groups=32, num_channels=256), 
+            nn.GroupNorm(num_groups=32, num_channels=256), 
             # nn.BatchNorm1d(256),
             nn.Dropout(p=0.5),  # Add dropout here
             # nn.ReLU() no activation

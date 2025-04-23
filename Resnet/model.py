@@ -24,9 +24,9 @@ class MRNet3(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling to reduce spatial dimensions
         
         # Add dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.5)
-        self.dropout_view2 = nn.Dropout(p=0.5)
-        self.dropout_view3 = nn.Dropout(p=0.5)
+        self.dropout_view1 = nn.Dropout(p=0.7)
+        self.dropout_view2 = nn.Dropout(p=0.7)
+        self.dropout_view3 = nn.Dropout(p=0.7)
         
         # The ResNet feature output will be of size 512 per model
         self.classifier1 = nn.Linear(512 * 3, 256)  # ResNet18 produces a 512-dimensional vector

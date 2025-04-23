@@ -30,10 +30,10 @@ class MRNet3(nn.Module):
         
         # The ResNet feature output will be of size 512 per model
         self.classifier1 = nn.Linear(512 * 3, 256)  # ResNet18 produces a 512-dimensional vector
-        self.dropout = nn.Dropout(p=0.7)  # Existing dropout
+        self.dropout = nn.Dropout(p=0.4)  # Existing dropout
         self.activation = nn.ReLU()
         # Add dropout before final classifier
-        self.dropout_final = nn.Dropout(p=0.3)
+        self.dropout_final = nn.Dropout(p=0.2)
         self.classifier2 = nn.Linear(256, 1)
 
     def forward(self, x):

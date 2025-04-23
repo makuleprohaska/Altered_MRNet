@@ -13,12 +13,12 @@ class MRNet3(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)
         
         # Add dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.1) # test
-        self.dropout_view2 = nn.Dropout(p=0.1)
-        self.dropout_view3 = nn.Dropout(p=0.1)
+        self.dropout_view1 = nn.Dropout(p=0.4) # test
+        self.dropout_view2 = nn.Dropout(p=0.4)
+        self.dropout_view3 = nn.Dropout(p=0.4)
 
         self.classifier1 = nn.Linear(int(256*3), 256)
-        self.dropout = nn.Dropout(p=0.1) # test
+        self.dropout = nn.Dropout(p=0.3) # test
         # self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 
@@ -56,9 +56,9 @@ class MRNet3(nn.Module):
             batch_features.append(x_stacked)
         
         x_stacked = torch.stack(batch_features)  # [batch_size, 768]
-        # x_stacked = self.classifier1(x_stacked)
-        # x_stacked = self.dropout(x_stacked)
-        # x_stacked = self.activation(x_stacked)
+        x_stacked = self.classifier1(x_stacked)
+        x_stacked = self.dropout(x_stacked)
+        x_stacked = self.activation(x_stacked)
         x_stacked = self.classifier2(x_stacked)  # [batch_size, 1]
         
         return x_stacked

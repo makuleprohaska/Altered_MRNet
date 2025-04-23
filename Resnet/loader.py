@@ -67,7 +67,7 @@ class MRDataset(data.Dataset):
     def __len__(self):
         return len(self.labels)
 
-def load_data3(device, data_dir, labels_csv, diagnosis=0):
+def load_data3(device, data_dir, labels_csv):
     # Read the CSV without a header, assign column names
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
     # Add leading zeros to match .npy filenames (e.g., 0 -> 0000.npy)

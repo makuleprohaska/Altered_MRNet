@@ -21,7 +21,7 @@ def get_device(use_gpu, use_mps):
         return torch.device("cpu")
 
 
-def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv):
+def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     train_loader, valid_loader = load_data3(device, data_dir, labels_csv)
@@ -29,8 +29,8 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     model = MRNet3()
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=.01)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5, factor=.3, threshold=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=max_patience, factor=.3, threshold=1e-4)
 
     best_val_loss = float('inf')
 
@@ -67,8 +67,8 @@ def get_parser():
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--gpu', action='store_true', help='Use CUDA if available')
     parser.add_argument('--mps', action='store_true', help='Use MPS if available')
-    parser.add_argument('--learning_rate', default=1e-05, type=float)
-    parser.add_argument('--weight_decay', default=0.01, type=float)
+    parser.add_argument('--learning_rate', default=1e-04, type=float)
+    parser.add_argument('--weight_decay', default=1e-04, type=float)
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         json.dump(vars(args), out, indent=4)
 
     train3(args.rundir, args.epochs, args.learning_rate, 
-          args.gpu, args.mps, args.data_dir, args.labels_csv)
+          args.gpu, args.mps, args.data_dir, args.labels_csv, args.weight_decay, args.max_patience)
 
 #to run use
 """

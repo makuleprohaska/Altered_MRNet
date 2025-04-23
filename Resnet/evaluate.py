@@ -8,8 +8,8 @@ from sklearn import metrics
 from torch.autograd import Variable
 from tqdm import tqdm
 
-from loader import load_data3  # Make sure you have load_data3 for MRNet3
-from model import MRNet3  # Import MRNet3 model
+from loader import load_data3
+from model import MRNet3
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -28,8 +28,11 @@ def get_parser():
     parser.add_argument('--labels_csv', type=str, required=True, help='Path to labels CSV file')
     parser.add_argument('--gpu', action='store_true', help='Use CUDA if available')
     parser.add_argument('--mps', action='store_true', help='Use MPS if available')
+    # *** Added: Batch size argument ***
+    parser.add_argument('--batch_size', default=4, type=int, help='Batch size for evaluation')
     return parser
 
+# *** Modified: Updated to handle batched inputs and original_slices ***
 def run_model(model, loader, train=False, optimizer=None):
     preds = []
     labels = []
@@ -46,25 +49,25 @@ def run_model(model, loader, train=False, optimizer=None):
         if train:
             optimizer.zero_grad()
 
-        vol, label = batch[0], batch[1]
+        # *** Changed: Unpack vol, label, and original_slices ***
+        vol, label, original_slices = batch
         
-        # Move volume and label to the correct device
-        vol_device = []
-        for i in vol:
-            i = i.to(loader.dataset.device)
-            vol_device.append(i)
+        # Move volume and label to the correct device (already on device from dataset)
+        vol_device = vol  # List of [B, S_max, 3, 224, 224]
         label = label.to(loader.dataset.device)
 
-        logit = model.forward(vol_device)
+        # *** Changed: Pass original_slices to forward ***
+        logit = model.forward(vol_device, original_slices)
         loss = loader.dataset.weighted_loss(logit, label)
         total_loss += loss.item()
 
         pred = torch.sigmoid(logit)
-        pred_npy = pred.data.cpu().numpy()[0][0]
-        label_npy = label.data.cpu().numpy()[0][0]
+        # *** Changed: Handle batched predictions ***
+        pred_npy = pred.data.cpu().numpy().flatten()
+        label_npy = label.data.cpu().numpy().flatten()
 
-        preds.append(pred_npy)
-        labels.append(label_npy)
+        preds.extend(pred_npy)  # *** Changed: Use extend for batch ***
+        labels.extend(label_npy)  # *** Changed: Use extend for batch ***
 
         if train:
             loss.backward()
@@ -78,15 +81,14 @@ def run_model(model, loader, train=False, optimizer=None):
 
     return avg_loss, auc, preds, labels
 
-def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv):
-    # Set up the device and load the data
+# *** Modified: Updated to pass batch_size and fix loader assignment ***
+def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv, batch_size):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     
-    # Assuming 'load_data3' handles the diagnosis filtering
-    train_loader, valid_loader, test_loader = load_data3(device, data_dir, labels_csv, diagnosis)
+    # *** Changed: Pass batch_size and fix return values ***
+    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size)
 
-    # Initialize the model (MRNet3)
     model = MRNet3()
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
@@ -97,10 +99,8 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
         loader = train_loader
     elif split == 'valid':
         loader = valid_loader
-    elif split == 'test':
-        loader = test_loader
     else:
-        raise ValueError("split must be 'train', 'valid', or 'test'")
+        raise ValueError("split must be 'train' or 'valid'")  # *** Updated: Removed 'test' option ***
 
     # Run the model for evaluation
     loss, auc, preds, labels = run_model(model, loader, train=False)
@@ -112,4 +112,4 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    evaluate(args.split, args.model_path, args.diagnosis, args.gpu, args.mps, args.data_dir, args.labels_csv)
+    evaluate(args.split, args.model_path, args.diagnosis, args.gpu, args.mps, args.data_dir, args.labels_csv, args.batch_size)

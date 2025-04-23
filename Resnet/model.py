@@ -1,10 +1,7 @@
-
 import torch
 import torch.nn as nn
 from torchvision import models
 from torchvision.models import ResNet18_Weights
-
-#might need to increase weight decay if still overfitting 
 
 class MRNet3(nn.Module):
     
@@ -34,33 +31,39 @@ class MRNet3(nn.Module):
         self.activation = nn.ReLU()
         self.classifier2 = nn.Linear(256, 1)
 
-    def forward(self, x):
-        # x is a list of 3 tensors (for axial, coronal, and sagittal)
-        x_1 = x[0]
-        x_2 = x[1]
-        x_3 = x[2]
+    # *** Modified: Added original_slices parameter and updated for batch processing ***
+    def forward(self, x, original_slices):
+        view_features = []
+        for view in range(3):
+            x_view = x[view]  # [B, S_max, 3, 256, 256]
+            B, S_max, _, H, W = x_view.shape
+            # Reshape for ResNet: treat all slices across batch as a single batch
+            x_view = x_view.view(B * S_max, 3, H, W)
+            if view == 0:
+                features = self.model1(x_view)
+            elif view == 1:
+                features = self.model2(x_view)
+            else:
+                features = self.model3(x_view)
+            # Apply GAP and reshape back to per-sample features
+            features = self.gap(features).view(B, S_max, 512)  # [B, S_max, 512]
+            # Mask padded slices with -inf to exclude them from max
+            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
+            mask = s_indices < original_slices[view].unsqueeze(1)  # [B, S_max]
+            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
+            # Max over slices per sample
+            max_features = torch.max(features, dim=1)[0]  # [B, 512]
+            # Apply dropout
+            if view == 0:
+                max_features = self.dropout_view1(max_features)
+            elif view == 1:
+                max_features = self.dropout_view2(max_features)
+            else:
+                max_features = self.dropout_view3(max_features)
+            view_features.append(max_features)
         
-        # Process each input slice using ResNet model (first remove batch dimension)
-        x_1 = torch.squeeze(x_1, dim=0)
-        x_1 = self.model1(x_1)
-        x_1 = self.gap(x_1).view(x_1.size(0), -1)  # Flatten after GAP
-        x_1 = torch.max(x_1, 0, keepdim=True)[0]
-        x_1 = self.dropout_view1(x_1)  # Apply dropout to view features
-
-        x_2 = torch.squeeze(x_2, dim=0)
-        x_2 = self.model2(x_2)
-        x_2 = self.gap(x_2).view(x_2.size(0), -1)
-        x_2 = torch.max(x_2, 0, keepdim=True)[0]
-        x_2 = self.dropout_view2(x_2)  # Apply dropout to view features
-
-        x_3 = torch.squeeze(x_3, dim=0)
-        x_3 = self.model3(x_3)
-        x_3 = self.gap(x_3).view(x_3.size(0), -1)
-        x_3 = torch.max(x_3, 0, keepdim=True)[0]
-        x_3 = self.dropout_view3(x_3)  # Apply dropout to view features
-        
-        # Concatenate the features from all 3 models
-        x_stacked = torch.cat((x_1, x_2, x_3), dim=1)
+        # Concatenate features from all views
+        x_stacked = torch.cat(view_features, dim=1)  # [B, 1536]
         
         # Pass through the classifier
         x_stacked = self.classifier1(x_stacked)

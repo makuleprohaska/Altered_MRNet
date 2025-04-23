@@ -29,7 +29,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     model = MRNet3()
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=max_patience, factor=.3, threshold=1e-4)
 
     best_val_loss = float('inf')
@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument('--weight_decay', default=1e-04, type=float)
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
-    parser.add_argument('--factor', default=0.3, type=float)
+    #parser.add_argument('--factor', default=0.3, type=float)
     return parser
 
 if __name__ == '__main__':

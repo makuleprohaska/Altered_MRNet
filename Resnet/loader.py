@@ -29,12 +29,12 @@ class MRDataset(data.Dataset):
 
         # *** Changed: Compute weights with float32 for MPS to avoid float64 ***
         neg_weight = np.mean(self.labels)
-        dtype = np.float32 if str(device).startswith('mps') else np.float64
+        dtype = np.float32 #if str(device).startswith('mps') else np.float64
         self.weights = [dtype(neg_weight), dtype(1 - neg_weight)]
 
     def weighted_loss(self, prediction, target):
         # *** Changed: Set dtype based on device (float32 for MPS, float64 for CPU/CUDA) ***
-        dtype = torch.float32 if str(self.device).startswith('mps') else torch.float64
+        dtype = torch.float32 #if str(self.device).startswith('mps') else torch.float64
         indices = target.squeeze(1).long()  # Shape: [B]
         # Create weights tensor with appropriate dtype
         weights_tensor = torch.tensor(self.weights, device=self.device, dtype=dtype)[indices]  # Shape: [B]
@@ -47,7 +47,7 @@ class MRDataset(data.Dataset):
 
         for i in range(3):           
             path = self.paths[i][index]
-            vol = np.load(path).astype(np.float32)  # Shape: (slices, H, W), slices varies
+            vol = np.load(path).astype(np.float32) 
 
             # Crop to INPUT_DIM x INPUT_DIM (224x224)
             pad = int((vol.shape[2] - INPUT_DIM) / 2)

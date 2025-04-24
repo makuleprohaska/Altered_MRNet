@@ -10,6 +10,8 @@ from tqdm import tqdm
 
 from loader import load_data3
 from model import MRNet3
+from torch.cuda.amp import autocast
+
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -34,6 +36,7 @@ def get_parser():
 
 # *** Modified: Updated to handle batched inputs and original_slices ***
 def run_model(model, loader, train=False, optimizer=None):
+
     preds = []
     labels = []
 
@@ -56,9 +59,17 @@ def run_model(model, loader, train=False, optimizer=None):
         vol_device = vol  # List of [B, S_max, 3, 224, 224]
         label = label.to(loader.dataset.device)
 
-        # *** Changed: Pass original_slices to forward ***
-        logit = model.forward(vol_device, original_slices)
-        loss = loader.dataset.weighted_loss(logit, label)
+        if str(loader.dataset.device).startswith('cuda'):
+            # Mixed precision context
+            with autocast(device_type='cuda'):
+                logit = model.forward(vol_device, original_slices)
+                loss = loader.dataset.weighted_loss(logit, label)        
+
+        else:
+            # *** Changed: Pass original_slices to forward ***
+            logit = model.forward(vol_device, original_slices)
+            loss = loader.dataset.weighted_loss(logit, label)
+        
         total_loss += loss.item()
 
         pred = torch.sigmoid(logit)

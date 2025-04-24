@@ -93,7 +93,7 @@ def run_model(model, loader, train=False, optimizer=None):
     return avg_loss, auc, preds, labels
 
 # *** Modified: Updated to pass batch_size and fix loader assignment ***
-def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_csv, batch_size):
+def evaluate(split, model_path, use_gpu, use_mps, data_dir, labels_csv, batch_size):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     
@@ -123,4 +123,4 @@ def evaluate(split, model_path, diagnosis, use_gpu, use_mps, data_dir, labels_cs
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    evaluate(args.split, args.model_path, args.diagnosis, args.gpu, args.mps, args.data_dir, args.labels_csv, args.batch_size)
+    evaluate(args.split, args.model_path, args.gpu, args.mps, args.data_dir, args.labels_csv, args.batch_size)

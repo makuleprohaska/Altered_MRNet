@@ -14,25 +14,22 @@ class MRNet3(nn.Module):
         # self.gap = nn.AdaptiveAvgPool2d(1)
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.2)
-        self.dropout_view2 = nn.Dropout(p=0.2)
-        self.dropout_view3 = nn.Dropout(p=0.2)
+        self.dropout_view1 = nn.Dropout(p=0.3)
+        self.dropout_view2 = nn.Dropout(p=0.3) # changed dropout 
+        self.dropout_view3 = nn.Dropout(p=0.3)
 
         # Separate classifier1 for each view
         self.classifier1_axial = nn.Sequential(
             nn.Linear(256, 256),
             # nn.GroupNorm(num_groups=32, num_channels=256),
-            nn.Dropout(p=0.1),
         )
         self.classifier1_coronal = nn.Sequential(
             nn.Linear(256, 256),
             # nn.GroupNorm(num_groups=32, num_channels=256),
-            nn.Dropout(p=0.1),
         )
         self.classifier1_sagittal = nn.Sequential(
             nn.Linear(256, 256),
             # nn.GroupNorm(num_groups=32, num_channels=256), #just for my Mac
-            nn.Dropout(p=0.1),
         )
 
         # Separate classifier2 for each view

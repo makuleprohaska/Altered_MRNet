@@ -18,7 +18,7 @@ def get_device(use_gpu, use_mps):
     else:
         return torch.device("cpu")
 
-def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weigtht_decay, max_patience):
+def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     train_loader, valid_loader = load_data3(device, data_dir, labels_csv)
@@ -26,7 +26,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     model = MRNet3()
     model = model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=weigtht_decay)
+    optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=max_patience, factor=.3, threshold=1e-4)
 
     best_val_loss = float('inf')

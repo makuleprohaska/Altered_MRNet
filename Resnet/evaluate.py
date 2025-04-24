@@ -61,7 +61,7 @@ def run_model(model, loader, train=False, optimizer=None):
 
         if str(loader.dataset.device).startswith('cuda'):
             # Mixed precision context
-            with autocast(device_type='cuda'):
+            with autocast(enabled=True):
                 logit = model.forward(vol_device, original_slices)
                 loss = loader.dataset.weighted_loss(logit, label)        
 

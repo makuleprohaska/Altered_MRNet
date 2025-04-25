@@ -22,6 +22,7 @@ class MRNet3(nn.Module):
         self.classifier1_axial = nn.Sequential(
             nn.Linear(256, 256),
             # nn.GroupNorm(num_groups=32, num_channels=256),
+            nn.BatchNorm1d(256),   # Batch norm !!! DON'T WANT IT WHEN BATCH SIZE IS 1  
             nn.Dropout(p=0.1),
         )
         self.classifier1_coronal = nn.Sequential(

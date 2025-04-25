@@ -71,7 +71,7 @@ def custom_collate_fn(batch):
     labels = torch.stack([item[1] for item in batch], dim=0)  # Stack labels: [batch_size, 1]
     return vol_lists, labels
 
-def load_data3(device, data_dir, labels_csv, diagnosis=0):
+def load_data3(device, data_dir, labels_csv, diagnosis=0, batch_size=1):
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
     labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
     
@@ -100,7 +100,7 @@ def load_data3(device, data_dir, labels_csv, diagnosis=0):
 
     train_loader = data.DataLoader(
         train_dataset, 
-        batch_size=1, 
+        batch_size=batch_size, 
         num_workers=0, 
         shuffle=True, 
         pin_memory=device.type == 'cuda',
@@ -109,7 +109,7 @@ def load_data3(device, data_dir, labels_csv, diagnosis=0):
 
     valid_loader = data.DataLoader(
         valid_dataset, 
-        batch_size=1, 
+        batch_size=batch_size, 
         num_workers=0, 
         shuffle=False, 
         pin_memory=device.type == 'cuda',

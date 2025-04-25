@@ -21,7 +21,7 @@ def get_device(use_gpu, use_mps):
 def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    train_loader, valid_loader = load_data3(device, data_dir, labels_csv)
+    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=args.batch_size)
     
     model = MRNet3()
     model = model.to(device)
@@ -50,8 +50,8 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             file_name = f'val{val_loss:0.4f}_train{train_loss:0.4f}_epoch{epoch+1}'
-            save_path = Path(rundir) / file_name
-            torch.save(model.state_dict(), save_path)
+            save_path = Path(rundir) / file_name 
+            # -torch.save(model.state_dict(), save_path)
 
         # Log metrics to file
         with open(os.path.join(rundir, 'metrics.txt'), 'a') as f:
@@ -70,6 +70,7 @@ def get_parser():
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)
+    parser.add_argument('--batch_size', default=2, type=int, help='Batch size for training and validation')
     return parser
 
 if __name__ == '__main__':

@@ -23,8 +23,12 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     print(f"Using device: {device}")
     train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=args.batch_size)
     
-    model = MRNet3()
+    #This now deals with the case that batch size is 1
+    use_batchnorm = args.batch_size > 1
+    model = MRNet3(use_batchnorm=use_batchnorm)
     model = model.to(device)
+
+    print(f"Using BatchNorm: {use_batchnorm}")
 
     optimizer = torch.optim.Adam(model.parameters(), learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=max_patience, factor=.3, threshold=1e-4)

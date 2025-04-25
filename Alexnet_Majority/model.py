@@ -14,9 +14,9 @@ class MRNet3(nn.Module):
         # self.gap = nn.AdaptiveAvgPool2d(1)
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.15)
-        self.dropout_view2 = nn.Dropout(p=0.15) # changed dropout 
-        self.dropout_view3 = nn.Dropout(p=0.15)
+        self.dropout_view1 = nn.Dropout(p=0.20)
+        self.dropout_view2 = nn.Dropout(p=0.20) # changed dropout 
+        self.dropout_view3 = nn.Dropout(p=0.20)
 
         # Separate classifier1 for each view
         self.classifier1_axial = nn.Sequential(

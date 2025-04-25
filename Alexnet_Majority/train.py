@@ -70,7 +70,7 @@ def get_parser():
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)
-    parser.add_argument('--batch_size', default=2, type=int, help='Batch size for training and validation')
+    parser.add_argument('--batch_size', default=1, type=int, help='Batch size for training and validation')
     return parser
 
 if __name__ == '__main__':

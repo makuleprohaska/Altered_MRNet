@@ -13,13 +13,13 @@ class MRNet3(nn.Module):
         self.gap = nn.AdaptiveMaxPool2d(1)
         # self.gap = nn.AdaptiveAvgPool2d(1)
         self.use_batchnorm = use_batchnorm
-        
+        n = 0.15
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.5)
-        self.dropout_view2 = nn.Dropout(p=0.5)
-        self.dropout_view3 = nn.Dropout(p=0.5)
+        self.dropout_view1 = nn.Dropout(p=n)
+        self.dropout_view2 = nn.Dropout(p=n)
+        self.dropout_view3 = nn.Dropout(p=n)
         
-        print("Dropout of 0.5")
+        print(f"Dropout of {n}")
 
 
         classifier_layers_axial = [nn.Linear(256, 256)]

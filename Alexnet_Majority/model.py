@@ -15,10 +15,11 @@ class MRNet3(nn.Module):
         self.use_batchnorm = use_batchnorm
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.175)
-        self.dropout_view2 = nn.Dropout(p=0.175)
-        self.dropout_view3 = nn.Dropout(p=0.175)
-        print("Dropout 0.175")
+        self.dropout_view1 = nn.Dropout(p=0.5)
+        self.dropout_view2 = nn.Dropout(p=0.5)
+        self.dropout_view3 = nn.Dropout(p=0.5)
+        
+        print("Dropout of 0.5")
 
 
         classifier_layers_axial = [nn.Linear(256, 256)]
@@ -45,8 +46,8 @@ class MRNet3(nn.Module):
 
     #New forward pass to deal with batch normalisation
 
-    def forward(self, x):
-    
+    def forward(self, x): 
+
         # Separate by view
         axial_views    = [sample[0] for sample in x]
         coronal_views  = [sample[1] for sample in x]

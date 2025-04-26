@@ -15,10 +15,10 @@ class MRNet3(nn.Module):
         self.use_batchnorm = use_batchnorm
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.25)
-        self.dropout_view2 = nn.Dropout(p=0.25)
-        self.dropout_view3 = nn.Dropout(p=0.25)
-        print("Dropout 0.25")
+        self.dropout_view1 = nn.Dropout(p=0.175)
+        self.dropout_view2 = nn.Dropout(p=0.175)
+        self.dropout_view3 = nn.Dropout(p=0.175)
+        print("Dropout 0.175")
 
 
         classifier_layers_axial = [nn.Linear(256, 256)]

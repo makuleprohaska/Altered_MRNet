@@ -18,7 +18,7 @@ def get_device(use_gpu, use_mps):
     else:
         return torch.device("cpu")
 
-def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience):
+def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience, epsilon):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=args.batch_size)
@@ -36,7 +36,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     best_val_loss = float('inf')
 
     start_time = datetime.now()
-    
+
     epsilon = args.eps
     print(f"Value of eps:{epsilon}")
     for epoch in range(epochs):
@@ -77,7 +77,7 @@ def get_parser():
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)
     parser.add_argument('--batch_size', default=1, type=int, help='Batch size for training and validation')
-    parser.add_argument('--eps', default=0, type=float, help='Label smoothing factor (0.0 = no smoothing)')
+    parser.add_argument('--eps', default=0.0, type=float, help='Label smoothing factor (0.0 = no smoothing)')
     return parser
 
 if __name__ == '__main__':

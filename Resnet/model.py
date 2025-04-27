@@ -20,9 +20,9 @@ class MRNet3(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.7)
-        self.dropout_view2 = nn.Dropout(p=0.7)
-        self.dropout_view3 = nn.Dropout(p=0.7)
+        self.dropout_view1 = nn.Dropout(p=0.6)
+        self.dropout_view2 = nn.Dropout(p=0.6)
+        self.dropout_view3 = nn.Dropout(p=0.6)
         
         # Fully connected layers with batch normalization
         self.classifier1 = nn.Linear(512 * 3, 256)  # Concatenated features from 3 views

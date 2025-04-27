@@ -92,44 +92,6 @@ class MRDataset(data.Dataset):
             vol_tensor = K.RandomHorizontalFlip(p=1.0)(vol_tensor)
         return vol_tensor
 
-
-    # def apply_augmentations(self, vol_tensor):
-    #     """
-    #     Apply random rotation, shift, and horizontal flip to the stack of slices.
-    #     The same parameters are applied to all slices in the stack for consistency.
-    #     """
-    #     slices, c, h, w = vol_tensor.shape
-
-    #     # Random rotation between -25 and 25 degrees
-    #     angle = random.uniform(-25, 25)
-
-    #     # Random shift between -25 and 25 pixels
-    #     shift_h = random.randint(-25, 25)
-    #     shift_w = random.randint(-25, 25)
-
-    #     # Random horizontal flip with 50% probability
-    #     flip = random.random() > 0.5
-
-    #     # Apply transformations to each slice
-    #     augmented_slices = []
-    #     for i in range(slices):
-    #         slice_tensor = vol_tensor[i]  # Shape: (3, 224, 224)
-
-    #         # Rotate
-    #         slice_tensor = TF.rotate(slice_tensor, angle)
-
-    #         # Shift (translate)
-    #         slice_tensor = TF.affine(slice_tensor, angle=0, translate=(shift_w, shift_h), scale=1.0, shear=0)
-
-    #         # Horizontal flip
-    #         if flip:
-    #             slice_tensor = TF.hflip(slice_tensor)
-
-    #         augmented_slices.append(slice_tensor)
-
-    #     # Stack augmented slices back into a tensor
-    #     return torch.stack(augmented_slices, dim=0)  # Shape: (slices, 3, 224, 224)
-
     def __len__(self):
         return len(self.labels)
 

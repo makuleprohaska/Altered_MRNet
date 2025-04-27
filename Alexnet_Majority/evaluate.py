@@ -37,55 +37,105 @@ def get_parser():
     
     return parser
 
-
-def run_model(model, loader, train=False, optimizer=None):
-    
+def run_model(model, loader, train=False, optimizer=None, eps: float = 0.0):
+    """
+    model    : your MRNet3 instance
+    loader   : DataLoader returning (vol_lists, label)
+    train    : whether to do optimizer.step()
+    optimizer: your Adam optimizer (only used if train=True)
+    eps      : label-smoothing factor (0.0 = no smoothing)
+    """
     preds = []
     labels = []
-    
+    total_loss = 0.0
+    num_batches = 0
+
     if train:
         model.train()
-    
     else:
         model.eval()
-    
-    total_loss = 0.
-    num_batches = 0
-    
-    print(f"num_batches: {len(loader)}")
-    
-    for batch in tqdm(loader, desc="Processing batches", total=len(loader)):
-        
+
+    device = loader.dataset.device
+
+    for vol_lists, label in tqdm(loader, desc="Processing batches", total=len(loader)):
+        # Move data to device
+        label = label.to(device)                       # [batch_size,1]
+        vol_lists = [[view.to(device) for view in views] for views in vol_lists]
+
+        # Forward
+        logits = model(vol_lists)                      # [batch_size,1]
+        probs  = torch.sigmoid(logits)                 # [batch_size,1]
+
+        # Loss
         if train:
+            # use smoothing in training
+            loss = loader.dataset.weighted_loss(logits, label, eps=eps)
             optimizer.zero_grad()
-        
-        vol_lists, label = batch  # vol_lists: [[axial, coronal, sagittal], ...]
-        label = label.to(loader.dataset.device)  # [batch_size, 1]
-        
-        # Move all tensors to device
-        vol_lists_device = [[view.to(loader.dataset.device) for view in vol_list] for vol_list in vol_lists]
-        
-        logit = model.forward(vol_lists_device)  # [batch_size, 1]
-        
-        loss = loader.dataset.weighted_loss(logit, label)
-        total_loss += loss.item()
-        
-        pred = torch.sigmoid(logit)
-        pred_npy = pred.data.cpu().numpy()[:, 0]  # (batch_size,)
-        label_npy = label.data.cpu().numpy()[:, 0]  # (batch_size,)
-        preds.extend(pred_npy.tolist())
-        labels.extend(label_npy.tolist())
-        
-        if train:
             loss.backward()
             optimizer.step()
+        else:
+            # no smoothing in val/test
+            loss = loader.dataset.weighted_loss(logits, label, eps=0.0)
+
+        # Accumulate
+        total_loss += loss.item()
+        preds.extend(probs.detach().cpu().view(-1).tolist())
+        labels.extend(label.detach().cpu().view(-1).tolist())
         num_batches += 1
-    
+
     avg_loss = total_loss / num_batches
-    fpr, tpr, threshold = metrics.roc_curve(labels, preds)
+    fpr, tpr, _ = metrics.roc_curve(labels, preds)
     auc = metrics.auc(fpr, tpr)
-    
+
     return avg_loss, auc, preds, labels
+# def run_model(model, loader, train=False, optimizer=None):
+    
+#     preds = []
+#     labels = []
+    
+#     if train:
+#         model.train()
+    
+#     else:
+#         model.eval()
+    
+#     total_loss = 0.
+#     num_batches = 0
+    
+#     print(f"num_batches: {len(loader)}")
+    
+#     for batch in tqdm(loader, desc="Processing batches", total=len(loader)):
+        
+#         if train:
+#             optimizer.zero_grad()
+        
+#         vol_lists, label = batch  # vol_lists: [[axial, coronal, sagittal], ...]
+#         label = label.to(loader.dataset.device)  # [batch_size, 1]
+        
+#         # Move all tensors to device
+#         vol_lists_device = [[view.to(loader.dataset.device) for view in vol_list] for vol_list in vol_lists]
+        
+#         logit = model.forward(vol_lists_device)  # [batch_size, 1]
+        
+#         loss = loader.dataset.weighted_loss(logit, label)
+#         total_loss += loss.item()
+        
+#         pred = torch.sigmoid(logit)
+#         pred_npy = pred.data.cpu().numpy()[:, 0]  # (batch_size,)
+#         label_npy = label.data.cpu().numpy()[:, 0]  # (batch_size,)
+#         preds.extend(pred_npy.tolist())
+#         labels.extend(label_npy.tolist())
+        
+#         if train:
+#             loss.backward()
+#             optimizer.step()
+#         num_batches += 1
+    
+#     avg_loss = total_loss / num_batches
+#     fpr, tpr, threshold = metrics.roc_curve(labels, preds)
+#     auc = metrics.auc(fpr, tpr)
+    
+#     return avg_loss, auc, preds, labels
 
 
 def evaluate(split, model_path, diagnosis, use_gpu, mps, data_dir, labels_csv):

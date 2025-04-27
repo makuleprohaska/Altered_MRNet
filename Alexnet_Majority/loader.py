@@ -30,7 +30,7 @@ class Dataset3(data.Dataset):
         neg_weight = np.mean(self.labels)
         self.weights = [neg_weight, 1 - neg_weight]
 
-    def weighted_loss(self, prediction, target, eps = 0.1):
+    def weighted_loss(self, prediction, target, eps: float = 0.0):
         # Ensure target is [batch_size, 1]
         target = target.view(-1, 1)
 

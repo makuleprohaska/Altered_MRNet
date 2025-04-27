@@ -37,15 +37,17 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
     start_time = datetime.now()
 
+    epsilon = 0.1
+    print(f"Value of eps:{epsilon}")
     for epoch in range(epochs):
         change = datetime.now() - start_time
         print('starting epoch {}. time passed: {}'.format(epoch+1, str(change)))
         
-        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer)
+        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer, eps=epsilon)
         print(f'train loss: {train_loss:0.4f}')
         print(f'train AUC: {train_auc:0.4f}')
 
-        val_loss, val_auc, _, _ = run_model(model, valid_loader)
+        val_loss, val_auc, _, _ = run_model(model, valid_loader, eps=0.0)
         print(f'valid loss: {val_loss:0.4f}')
         print(f'valid AUC: {val_auc:0.4f}')
 

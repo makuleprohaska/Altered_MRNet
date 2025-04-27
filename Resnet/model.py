@@ -32,7 +32,9 @@ class MRNet3(nn.Module):
         self.classifier2 = nn.Linear(256, 1)
 
     def forward(self, x, original_slices):
+        
         view_features = []
+        
         for view in range(3):
             x_view = x[view]  # [B, S_max, 3, 224, 224]
             B, S_max, _, H, W = x_view.shape

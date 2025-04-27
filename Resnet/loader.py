@@ -12,7 +12,7 @@ MEAN = [0.485, 0.456, 0.406]  # ImageNet mean for ResNet (per channel)
 STDDEV = [0.229, 0.224, 0.225]  # ImageNet std for ResNet (per channel)
 
 class MRDataset(data.Dataset):
-    def __init__(self, data_dir, file_list, labels_dict, device):
+    def __init__(self, data_dir, file_list, labels_dict, device, label_smoothing=0.1):
         super().__init__()
         self.device = device
         self.data_dir_axial = f"{data_dir}/axial"
@@ -26,14 +26,25 @@ class MRDataset(data.Dataset):
         self.paths = [self.paths_axial, self.paths_coronal, self.paths_sagittal]
         
         self.labels = [labels_dict[file] for file in file_list]
+        self.label_smoothing = label_smoothing  # New parameter for label smoothing
 
         neg_weight = np.mean(self.labels)
-        self.weights = [neg_weight, 1 - neg_weight]
+        dtype = np.float32
+        self.weights = [dtype(neg_weight), dtype(1 - neg_weight)]
 
-    def weighted_loss(self, prediction, target):
-        weights_npy = np.array([self.weights[int(t[0])] for t in target.data])
-        weights_tensor = torch.FloatTensor(weights_npy).to(self.device)
-        loss = F.binary_cross_entropy_with_logits(prediction, target, weight=weights_tensor)
+    def weighted_loss(self, prediction, target, train):
+        dtype = torch.float32
+        indices = target.squeeze(1).long()  # Shape: [B]
+        weights_tensor = torch.tensor(self.weights, device=self.device, dtype=dtype)[indices]  # Shape: [B]
+        weights_tensor = weights_tensor.unsqueeze(1)  # Shape: [B, 1]
+
+        # Apply label smoothing only during training if label_smoothing > 0
+        if train and self.label_smoothing > 0:
+            smoothed_target = target * (1 - self.label_smoothing) + (1 - target) * self.label_smoothing
+        else:
+            smoothed_target = target
+
+        loss = F.binary_cross_entropy_with_logits(prediction, smoothed_target, weight=weights_tensor)
         return loss
 
     def __getitem__(self, index):
@@ -41,7 +52,7 @@ class MRDataset(data.Dataset):
 
         for i in range(3):           
             path = self.paths[i][index]
-            vol = np.load(path).astype(np.float32)  # Shape: (slices, H, W), slices varies
+            vol = np.load(path).astype(np.float32) 
 
             # Crop to INPUT_DIM x INPUT_DIM (224x224)
             pad = int((vol.shape[2] - INPUT_DIM) / 2)
@@ -67,23 +78,38 @@ class MRDataset(data.Dataset):
     def __len__(self):
         return len(self.labels)
 
-def load_data3(device, data_dir, labels_csv):
-    # Read the CSV without a header, assign column names
+def collate_fn(batch):
+    device = batch[0][0][0].device
+    view0_list = [sample[0][0] for sample in batch]  # Axial
+    view1_list = [sample[0][1] for sample in batch]  # Coronal
+    view2_list = [sample[0][2] for sample in batch]  # Sagittal
+    
+    # Pad slices to the maximum in the batch for each view
+    padded_view0 = torch.nn.utils.rnn.pad_sequence(view0_list, batch_first=True)
+    padded_view1 = torch.nn.utils.rnn.pad_sequence(view1_list, batch_first=True)
+    padded_view2 = torch.nn.utils.rnn.pad_sequence(view2_list, batch_first=True)
+    
+    # Store original slice counts for masking in the model
+    original_slices0 = torch.tensor([v.shape[0] for v in view0_list], device=device)
+    original_slices1 = torch.tensor([v.shape[0] for v in view1_list], device=device)
+    original_slices2 = torch.tensor([v.shape[0] for v in view2_list], device=device)
+    
+    # Stack labels
+    labels = torch.stack([sample[1] for sample in batch])
+    
+    return [padded_view0, padded_view1, padded_view2], labels, [original_slices0, original_slices1, original_slices2]
+
+def load_data3(device, data_dir, labels_csv, batch_size=1, label_smoothing=0.1):
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
-    # Add leading zeros to match .npy filenames (e.g., 0 -> 0000.npy)
     labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
     labels_dict = dict(zip(labels_df['filename'], labels_df['label']))
 
-    # List all .npy files in the axial directory
     all_files = [f for f in os.listdir(f"{data_dir}/axial") if f.endswith(".npy")]
-    # Filter to only include files that have labels
     all_files = [f for f in all_files if f in labels_dict]
     all_files.sort()
 
-    # Extract labels for stratification
     labels = [labels_dict[file] for file in all_files]
 
-    # Split the data with stratification
     train_files, valid_files = train_test_split(
         all_files, 
         test_size=0.2, 
@@ -91,10 +117,10 @@ def load_data3(device, data_dir, labels_csv):
         stratify=labels
     )
 
-    train_dataset = MRDataset(data_dir, train_files, labels_dict, device)
-    valid_dataset = MRDataset(data_dir, valid_files, labels_dict, device)
+    train_dataset = MRDataset(data_dir, train_files, labels_dict, device, label_smoothing=label_smoothing)
+    valid_dataset = MRDataset(data_dir, valid_files, labels_dict, device, label_smoothing=label_smoothing)
 
-    train_loader = data.DataLoader(train_dataset, batch_size=1, num_workers=0, shuffle=True)
-    valid_loader = data.DataLoader(valid_dataset, batch_size=1, num_workers=0, shuffle=False)
+    train_loader = data.DataLoader(train_dataset, batch_size=batch_size, num_workers=0, shuffle=True, collate_fn=collate_fn)
+    valid_loader = data.DataLoader(valid_dataset, batch_size=batch_size, num_workers=0, shuffle=False, collate_fn=collate_fn)
 
     return train_loader, valid_loader

@@ -49,7 +49,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
         scheduler.step(val_loss)
 
-        if val_auc < best_val_auc:
+        if val_auc > best_val_auc:
             best_val_auc = val_auc
 
             file_name = f'val{val_auc:0.4f}_train{train_auc:0.4f}_epoch{epoch+1}'

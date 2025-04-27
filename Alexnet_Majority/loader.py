@@ -30,7 +30,7 @@ class Dataset3(data.Dataset):
         neg_weight = np.mean(self.labels)
         self.weights = [neg_weight, 1 - neg_weight]
 
-    def weighted_loss(self, prediction, target):
+    def weighted_loss(self, prediction, target, eps = 0.1):
         # Ensure target is [batch_size, 1]
         target = target.view(-1, 1)
 
@@ -40,9 +40,15 @@ class Dataset3(data.Dataset):
         # Reshape weights to [batch_size, 1] to match prediction and target
         weights_tensor = torch.FloatTensor(weights_npy).view(-1, 1).to(target.device)
 
-        # Compute loss with weights reshaped to [batch_size, 1]
-        loss = F.binary_cross_entropy_with_logits(prediction, target, weight=weights_tensor)
+        smoothed = target * (1 - eps) + (1 - target) * eps # new
+
+        # 3) compute BCE with logits against the *smoothed* targets
+        loss = F.binary_cross_entropy_with_logits(prediction, smoothed, weight=weights_tensor) #new
         return loss
+        # # Compute loss with weights reshaped to [batch_size, 1]
+        # loss = F.binary_cross_entropy_with_logits(prediction, target, weight=weights_tensor)
+
+        # return loss
 
     def __getitem__(self, index):
         vol_list = []

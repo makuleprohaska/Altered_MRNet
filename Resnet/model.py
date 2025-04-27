@@ -36,26 +36,31 @@ class MRNet3(nn.Module):
         view_features = []
         
         for view in range(3):
+            
             x_view = x[view]  # [B, S_max, 3, 224, 224]
             B, S_max, _, H, W = x_view.shape
             x_view = x_view.view(B * S_max, 3, H, W)
+            
             if view == 0:
                 features = self.model1(x_view)
             elif view == 1:
                 features = self.model2(x_view)
             else:
                 features = self.model3(x_view)
+            
             features = self.gap(features).view(B, S_max, 512)  # [B, S_max, 512]
             s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
             mask = s_indices < original_slices[view].unsqueeze(1)
             features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
             max_features = torch.max(features, dim=1)[0]  # [B, 512]
+            
             if view == 0:
                 max_features = self.dropout_view1(max_features)
             elif view == 1:
                 max_features = self.dropout_view2(max_features)
             else:
                 max_features = self.dropout_view3(max_features)
+            
             view_features.append(max_features)
         
         # Concatenate features from all views

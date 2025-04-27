@@ -36,8 +36,8 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     best_val_loss = float('inf')
 
     start_time = datetime.now()
-
-    epsilon = 0.1
+    
+    epsilon = args.eps
     print(f"Value of eps:{epsilon}")
     for epoch in range(epochs):
         change = datetime.now() - start_time
@@ -77,6 +77,7 @@ def get_parser():
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--factor', default=0.3, type=float)
     parser.add_argument('--batch_size', default=1, type=int, help='Batch size for training and validation')
+    parser.add_argument('--eps', default=0, type=float, help='Label smoothing factor (0.0 = no smoothing)')
     return parser
 
 if __name__ == '__main__':
@@ -95,7 +96,7 @@ if __name__ == '__main__':
         json.dump(vars(args), out, indent=4)
 
         train3(args.rundir, args.epochs, args.learning_rate, 
-           args.gpu, args.mps, args.data_dir, args.labels_csv, args.weight_decay, args.max_patience)
+           args.gpu, args.mps, args.data_dir, args.labels_csv, args.weight_decay, args.max_patience, args.eps)
     
 #to run use
 """

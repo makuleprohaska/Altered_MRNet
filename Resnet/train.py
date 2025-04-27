@@ -31,7 +31,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=max_patience, factor=.3, threshold=1e-4)
 
-    best_val_loss = float('inf')
+    best_val_auc = float('-inf')
 
     start_time = datetime.now()
 
@@ -49,10 +49,10 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
         scheduler.step(val_loss)
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        if val_auc < best_val_auc:
+            best_val_auc = val_auc
 
-            file_name = f'val{val_loss:0.4f}_train{train_loss:0.4f}_epoch{epoch+1}'
+            file_name = f'val{val_auc:0.4f}_train{train_auc:0.4f}_epoch{epoch+1}'
             save_path = Path(rundir) / file_name
             torch.save(model.state_dict(), save_path)
 

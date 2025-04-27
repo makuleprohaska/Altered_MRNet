@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torchvision.transforms.functional as TF
 import random
+import kornia.augmentation as K
 
 INPUT_DIM = 224
 MAX_PIXEL_VAL = 1.0  # ResNet expects [0, 1] before channel-wise normalization
@@ -84,41 +85,50 @@ class MRDataset(data.Dataset):
         return vol_list, label_tensor
 
     def apply_augmentations(self, vol_tensor):
-        """
-        Apply random rotation, shift, and horizontal flip to the stack of slices.
-        The same parameters are applied to all slices in the stack for consistency.
-        """
-        slices, c, h, w = vol_tensor.shape
+        # vol_tensor: (slices, 3, 224, 224)
+        vol_tensor = K.RandomRotation(degrees=25)(vol_tensor)
+        vol_tensor = K.RandomAffine(degrees=0, translate=(25/224, 25/224))(vol_tensor)
+        if random.random() > 0.5:
+            vol_tensor = K.RandomHorizontalFlip(p=1.0)(vol_tensor)
+        return vol_tensor
 
-        # Random rotation between -25 and 25 degrees
-        angle = random.uniform(-25, 25)
 
-        # Random shift between -25 and 25 pixels
-        shift_h = random.randint(-25, 25)
-        shift_w = random.randint(-25, 25)
+    # def apply_augmentations(self, vol_tensor):
+    #     """
+    #     Apply random rotation, shift, and horizontal flip to the stack of slices.
+    #     The same parameters are applied to all slices in the stack for consistency.
+    #     """
+    #     slices, c, h, w = vol_tensor.shape
 
-        # Random horizontal flip with 50% probability
-        flip = random.random() > 0.5
+    #     # Random rotation between -25 and 25 degrees
+    #     angle = random.uniform(-25, 25)
 
-        # Apply transformations to each slice
-        augmented_slices = []
-        for i in range(slices):
-            slice_tensor = vol_tensor[i]  # Shape: (3, 224, 224)
+    #     # Random shift between -25 and 25 pixels
+    #     shift_h = random.randint(-25, 25)
+    #     shift_w = random.randint(-25, 25)
 
-            # Rotate
-            slice_tensor = TF.rotate(slice_tensor, angle)
+    #     # Random horizontal flip with 50% probability
+    #     flip = random.random() > 0.5
 
-            # Shift (translate)
-            slice_tensor = TF.affine(slice_tensor, angle=0, translate=(shift_w, shift_h), scale=1.0, shear=0)
+    #     # Apply transformations to each slice
+    #     augmented_slices = []
+    #     for i in range(slices):
+    #         slice_tensor = vol_tensor[i]  # Shape: (3, 224, 224)
 
-            # Horizontal flip
-            if flip:
-                slice_tensor = TF.hflip(slice_tensor)
+    #         # Rotate
+    #         slice_tensor = TF.rotate(slice_tensor, angle)
 
-            augmented_slices.append(slice_tensor)
+    #         # Shift (translate)
+    #         slice_tensor = TF.affine(slice_tensor, angle=0, translate=(shift_w, shift_h), scale=1.0, shear=0)
 
-        # Stack augmented slices back into a tensor
-        return torch.stack(augmented_slices, dim=0)  # Shape: (slices, 3, 224, 224)
+    #         # Horizontal flip
+    #         if flip:
+    #             slice_tensor = TF.hflip(slice_tensor)
+
+    #         augmented_slices.append(slice_tensor)
+
+    #     # Stack augmented slices back into a tensor
+    #     return torch.stack(augmented_slices, dim=0)  # Shape: (slices, 3, 224, 224)
 
     def __len__(self):
         return len(self.labels)

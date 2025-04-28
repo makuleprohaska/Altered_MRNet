@@ -6,6 +6,7 @@ import torch.utils.data as data
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import kornia.augmentation as K
+import random 
 
 INPUT_DIM = 227
 MAX_PIXEL_VAL = 1.0  
@@ -71,7 +72,7 @@ class MRDataset(data.Dataset):
             vol_tensor = torch.FloatTensor(vol).to(self.device)  # Shape: (slices, 3, 227, 227)
 
             # Apply augmentations if training and augment is enabled
-            if self.train and self.augment:
+            if self.train and self.augment and random.random() < 0.5:
                 vol_tensor = self.apply_augmentations(vol_tensor)
 
             # Apply ImageNet normalization per channel

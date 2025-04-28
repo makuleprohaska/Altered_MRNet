@@ -12,10 +12,10 @@ class MRNet3(nn.Module):
         self.model3 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.gap = nn.AdaptiveAvgPool2d(1)
 
-        # Add batch normalization for each view's feature maps
-        self.bn_view1 = nn.BatchNorm2d(256)  # AlexNet features output 256 channels
-        self.bn_view2 = nn.BatchNorm2d(256)
-        self.bn_view3 = nn.BatchNorm2d(256)
+        # # Add batch normalization for each view's feature maps
+        # self.bn_view1 = nn.BatchNorm2d(256)  # AlexNet features output 256 channels
+        # self.bn_view2 = nn.BatchNorm2d(256)
+        # self.bn_view3 = nn.BatchNorm2d(256)
         
         # Add dropout for each view's features
         self.dropout_view1 = nn.Dropout(p=0.2) 
@@ -40,13 +40,13 @@ class MRNet3(nn.Module):
             
             if view == 0:
                 features = self.model1.features(x_view)
-                features = self.bn_view1(features)
+                #features = self.bn_view1(features)
             elif view == 1:
                 features = self.model2.features(x_view)
-                features = self.bn_view2(features)
+                #features = self.bn_view2(features)
             else:
                 features = self.model3.features(x_view)
-                features = self.bn_view3(features)
+                #features = self.bn_view3(features)
             
             features = self.gap(features).view(B, S_max, 256)  # [B, S_max, 256]
             s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)

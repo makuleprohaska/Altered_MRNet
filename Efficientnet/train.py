@@ -73,7 +73,7 @@ def get_parser():
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--batch_size', default=4, type=int, help='Batch size for training and validation')
-    parser.add_argument('--label_smoothing', default=0.1, type=float, help='Label smoothing factor')
+    parser.add_argument('--label_smoothing', default=0, type=float, help='Label smoothing factor')
     return parser
 
 if __name__ == '__main__':

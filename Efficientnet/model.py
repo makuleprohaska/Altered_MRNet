@@ -19,28 +19,14 @@ class MRNet3(nn.Module):
         
         # Enhanced fully connected classifier
         self.classifier = nn.Sequential(
-            nn.Linear(1280 * 3, 2048),  # Input: Concatenated features (1280 * 3 = 3840)
-            nn.BatchNorm1d(2048),
-            nn.ReLU(),
-            #nn.Dropout(p=0.4),  # Increased dropout for regularization
-            
-            nn.Linear(2048, 1024),  # Additional layer
-            nn.BatchNorm1d(1024),
-            nn.ReLU(),
-            #nn.Dropout(p=0.3),
-            
-            nn.Linear(1024, 512),  # Additional layer
+            nn.Linear(1280 * 3, 512),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            #nn.Dropout(p=0.3),
-            
-            nn.Linear(512, 256),  # Original intermediate layer
+            nn.Linear(512, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            #nn.Dropout(p=0.2),  # Reduced dropout for later layers
-            
-            nn.Linear(256, 1)  # Output layer for binary classification
-        )
+            nn.Linear(256, 1)
+            )
 
     def forward(self, x, original_slices):
         view_features = []

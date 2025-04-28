@@ -21,7 +21,7 @@ def get_device(use_gpu, use_mps):
 def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience, epsilon):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=args.batch_size)
+    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=args.batch_size, augment=args.augment)
     
     #This now deals with the case that batch size is 1
     use_batchnorm = args.batch_size > 1
@@ -78,6 +78,7 @@ def get_parser():
     parser.add_argument('--factor', default=0.3, type=float)
     parser.add_argument('--batch_size', default=1, type=int, help='Batch size for training and validation')
     parser.add_argument('--eps', default=0.0, type=float, help='Label smoothing factor (0.0 = no smoothing)')
+    parser.add_argument('--augment', action='store_true', help='Apply data augmentation during training')
     return parser
 
 if __name__ == '__main__':

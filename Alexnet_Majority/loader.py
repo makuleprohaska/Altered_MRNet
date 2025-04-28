@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import torch.utils.data as data
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import kornia.augmentation as K
+import random
 
 INPUT_DIM = 224
 MAX_PIXEL_VAL = 255
@@ -12,7 +14,7 @@ MEAN = 58.09
 STDDEV = 49.73
 
 class Dataset3(data.Dataset):
-    def __init__(self, data_dir, file_list, labels_dict, device):
+    def __init__(self, data_dir, file_list, labels_dict, device, train=False, augment=False):
         super().__init__()
         self.device = device
         self.data_dir_axial = f"{data_dir}/axial"
@@ -29,6 +31,9 @@ class Dataset3(data.Dataset):
 
         neg_weight = np.mean(self.labels)
         self.weights = [neg_weight, 1 - neg_weight]
+
+        self.train = train  #this ensures even when augment = True we never perform data augmentation on the validation/test set
+        self.augment = augment              
 
     def weighted_loss(self, prediction, target, eps: float = 0.0):
         # Ensure target is [batch_size, 1]
@@ -62,8 +67,24 @@ class Dataset3(data.Dataset):
             vol = np.stack((vol,) * 3, axis=1)
             vol_tensor = torch.FloatTensor(vol)  # Keep on CPU
             vol_list.append(vol_tensor)
+
+            # Apply augmentations if train and augment flags are True
+            if self.train and self.augment:
+                vol_tensor = self.apply_augmentations(vol_tensor)
+        
+            vol_list.append(vol_tensor)
+
         label_tensor = torch.FloatTensor([self.labels[index]])  # Shape: [1]
         return vol_list, label_tensor
+    
+    def apply_augmentations(self, vol_tensor):
+        # Apply same augmentations slice-wise
+        vol_tensor = K.RandomRotation(degrees=25)(vol_tensor)
+        vol_tensor = K.RandomAffine(degrees=0, translate=(25/224, 25/224))(vol_tensor)
+        if random.random() > 0.5:
+            vol_tensor = K.RandomHorizontalFlip(p=1.0)(vol_tensor)
+        return vol_tensor
+    
 
     def __len__(self):
         return len(self.labels)
@@ -77,7 +98,7 @@ def custom_collate_fn(batch):
     labels = torch.stack([item[1] for item in batch], dim=0)  # Stack labels: [batch_size, 1]
     return vol_lists, labels
 
-def load_data3(device, data_dir, labels_csv, diagnosis=0, batch_size=1):
+def load_data3(device, data_dir, labels_csv, diagnosis=0, batch_size=1, augment=False):
     labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
     labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
     
@@ -101,8 +122,8 @@ def load_data3(device, data_dir, labels_csv, diagnosis=0, batch_size=1):
         stratify=valid_labels
     )
 
-    train_dataset = Dataset3(data_dir, train_files, labels_dict, device)
-    valid_dataset = Dataset3(data_dir, valid_files, labels_dict, device)
+    train_dataset = Dataset3(data_dir, train_files, labels_dict, device, train=True, augment=augment)
+    valid_dataset = Dataset3(data_dir, valid_files, labels_dict, device, train=False, augment=False)
 
     train_loader = data.DataLoader(
         train_dataset, 

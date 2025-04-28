@@ -17,13 +17,13 @@ class MRNet3(nn.Module):
         self.dropout_view2 = nn.Dropout(p=0.5)
         self.dropout_view3 = nn.Dropout(p=0.5)
 
-        self.classifier1 = nn.Linear(int(256*3), 256)
+        self.classifier1 = nn.Linear(int(256*3), 1)
         
-        self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
+        # self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
         
-        self.dropout = nn.Dropout(p=0.3) # test
-        self.activation = nn.ReLU() 
-        self.classifier2 = nn.Linear(256, 1)
+        # self.dropout = nn.Dropout(p=0.3) # test
+        # self.activation = nn.ReLU() 
+        # self.classifier2 = nn.Linear(256, 1)
 
     def forward(self, x, original_slices):
         
@@ -62,9 +62,9 @@ class MRNet3(nn.Module):
         
         # Fully connected layers with BN
         x_stacked = self.classifier1(x_stacked)  # [B, 256]
-        x_stacked = self.bn1(x_stacked)  # Apply batch normalization
-        x_stacked = self.dropout(x_stacked)
-        x_stacked = self.activation(x_stacked)
-        x_stacked = self.classifier2(x_stacked)  # [B, 1]
+        # x_stacked = self.bn1(x_stacked)  # Apply batch normalization
+        # x_stacked = self.dropout(x_stacked)
+        # x_stacked = self.activation(x_stacked)
+        # x_stacked = self.classifier2(x_stacked)  # [B, 1]
         
         return x_stacked

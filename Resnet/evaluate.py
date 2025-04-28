@@ -9,6 +9,7 @@ from torch.autograd import Variable
 from tqdm import tqdm
 
 from loader import load_data3
+from loader import load_data_test
 from model import MRNet3
 from torch.cuda.amp import autocast
 
@@ -86,7 +87,16 @@ def evaluate(split, model_path, use_gpu, use_mps, data_dir, labels_csv, batch_si
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     
-    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+    if split == 'train' or split == 'valid':
+        train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+
+    elif split == 'test':
+        test_loader = load_data_test(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+
+    else:
+        raise ValueError("split must be 'train', 'valid', or 'test'")
+    
+    print("Loading model from path:", model_path)
 
     model = MRNet3()
     state_dict = torch.load(model_path, map_location=device)
@@ -97,8 +107,8 @@ def evaluate(split, model_path, use_gpu, use_mps, data_dir, labels_csv, batch_si
         loader = train_loader
     elif split == 'valid':
         loader = valid_loader
-    else:
-        raise ValueError("split must be 'train' or 'valid'")
+    elif split == 'test':
+        loader = test_loader
 
     loss, auc, preds, labels = run_model(model, loader, train=False)
 

@@ -124,3 +124,19 @@ def load_data3(device, data_dir, labels_csv, batch_size=1, label_smoothing=0.1):
     valid_loader = data.DataLoader(valid_dataset, batch_size=batch_size, num_workers=0, shuffle=False, collate_fn=collate_fn)
 
     return train_loader, valid_loader
+
+def load_data_test(device, data_dir, labels_csv, batch_size=1, label_smoothing=0):
+    
+    labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
+    labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
+    labels_dict = dict(zip(labels_df['filename'], labels_df['label']))
+
+    test_files = [f for f in os.listdir(f"{data_dir}/axial") if f.endswith(".npy")]
+    test_files = [f for f in test_files if f in labels_dict]
+    test_files.sort()
+
+    test_dataset = MRDataset(data_dir, test_files, labels_dict, device, label_smoothing=label_smoothing)
+
+    test_loader = data.DataLoader(test_dataset, batch_size=batch_size, num_workers=0, shuffle=False, collate_fn=collate_fn)
+
+    return test_loader

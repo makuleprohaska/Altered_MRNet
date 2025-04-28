@@ -18,21 +18,21 @@ class MRNet3(nn.Module):
         self.model3.classifier = nn.Identity()
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.3)
-        self.dropout_view2 = nn.Dropout(p=0.3)
-        self.dropout_view3 = nn.Dropout(p=0.3)
+        #self.dropout_view1 = nn.Dropout(p=0.3)
+        #self.dropout_view2 = nn.Dropout(p=0.3)
+        #self.dropout_view3 = nn.Dropout(p=0.3)
         
         # Fully connected layers with batch normalization
         self.classifier1 = nn.Linear(1280 * 3, 1280)  # Concatenated features from 3 views (1280 * 3 = 3840)
         self.bn1 = nn.BatchNorm1d(1280)
-        self.dropout1 = nn.Dropout(p=0.5)
+        self.dropout1 = nn.Dropout(p=0.3)
         
         self.activation = nn.ReLU()
         
         self.classifier2 = nn.Linear(1280, 256)
-        self.dropout2 = nn.Dropout(p=0.3)
+        #self.dropout2 = nn.Dropout(p=0.3)
         
-        self.classifier3 = nn.Linear(256, 1)  # Fixed typo (Liner -> Linear)
+        self.classifier3 = nn.Linear(256, 1) 
 
     def forward(self, x, original_slices):
         view_features = []
@@ -55,12 +55,12 @@ class MRNet3(nn.Module):
             features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
             max_features = torch.max(features, dim=1)[0]  # [B, 1280]
             
-            if view == 0:
-                max_features = self.dropout_view1(max_features)
-            elif view == 1:
-                max_features = self.dropout_view2(max_features)
-            else:
-                max_features = self.dropout_view3(max_features)
+            # if view == 0:
+            #     max_features = self.dropout_view1(max_features)
+            # elif view == 1:
+            #     max_features = self.dropout_view2(max_features)
+            # else:
+            #     max_features = self.dropout_view3(max_features)
             
             view_features.append(max_features)
         
@@ -74,7 +74,7 @@ class MRNet3(nn.Module):
         x_stacked = self.activation(x_stacked)
         
         x_stacked = self.classifier2(x_stacked)  # [B, 256]
-        x_stacked = self.dropout2(x_stacked)
+        #x_stacked = self.dropout2(x_stacked)
         x_stacked = self.activation(x_stacked)
         
         x_stacked = self.classifier3(x_stacked)  # [B, 1]

@@ -33,52 +33,81 @@ def get_parser():
     parser.add_argument('--label_smoothing', default=0.1, type=float, help='Label smoothing factor')
     return parser
 
-def run_model(model, loader, train=False, optimizer=None):
+def run_model(model, loader, train=False, optimizer=None, accumulation_steps=4):
+    """
+    Run the model on the given data loader with gradient accumulation for training.
+    
+    Args:
+        model: The neural network model.
+        loader: DataLoader providing the batches.
+        train: Boolean indicating training or evaluation mode.
+        optimizer: Optimizer used for weight updates (required if train=True).
+        accumulation_steps: Number of batches to accumulate gradients over (default: 4).
+    
+    Returns:
+        avg_loss: Average loss over the dataset.
+        auc: Area under the ROC curve.
+        preds: List of predictions.
+        labels: List of true labels.
+    """
     preds = []
     labels = []
+    total_loss = 0.
+    num_batches = 0
 
+    # Set model mode
     if train:
         model.train()
     else:
         model.eval()
 
-    total_loss = 0.
-    num_batches = 0
-    print(f"num_batches: {len(loader)}")
-    for batch in tqdm(loader, desc="Processing batches", total=len(loader)):
-        if train:
-            optimizer.zero_grad()
-
+    # Process batches
+    for i, batch in enumerate(tqdm(loader, desc="Processing batches", total=len(loader))):
         vol, label, original_slices = batch
-        
-        vol_device = vol  # List of [B, S_max, 3, 224, 224]
+        vol_device = vol  # Assuming vol is already on the correct device
         label = label.to(loader.dataset.device)
 
+        # Zero gradients at the start of an accumulation cycle
+        if train and i % accumulation_steps == 0:
+            optimizer.zero_grad()
+
+        # Forward pass
         if str(loader.dataset.device).startswith('cuda'):
-            with autocast(enabled=True):
+            with autocast(enabled=True):  # Mixed precision for CUDA
                 logit = model.forward(vol_device, original_slices)
-                loss = loader.dataset.weighted_loss(logit, label, train)
+                loss = loader.dataset.weighted_loss(logit, label, train) / accumulation_steps
         else:
             logit = model.forward(vol_device, original_slices)
-            loss = loader.dataset.weighted_loss(logit, label, train)
-        
-        total_loss += loss.item()
+            loss = loader.dataset.weighted_loss(logit, label, train) / accumulation_steps
 
+        # Backward pass for training
+        if train:
+            loss.backward()  # Accumulate gradients
+
+            # Update weights after accumulation_steps batches
+            if (i + 1) % accumulation_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad()
+
+        # Track loss (scale back for logging)
+        total_loss += loss.item() * accumulation_steps
+        num_batches += 1
+
+        # Collect predictions and labels
         pred = torch.sigmoid(logit)
         pred_npy = pred.data.cpu().numpy().flatten()
         label_npy = label.data.cpu().numpy().flatten()
-
         preds.extend(pred_npy)
         labels.extend(label_npy)
 
-        if train:
-            loss.backward()
-            optimizer.step()
-        num_batches += 1
+    # Handle remaining gradients at the end of the epoch
+    if train and num_batches % accumulation_steps != 0:
+        optimizer.step()
+        optimizer.zero_grad()
 
+    # Compute average loss and AUC
     avg_loss = total_loss / num_batches
-
-    fpr, tpr, threshold = metrics.roc_curve(labels, preds)
+    fpr, tpr, _ = metrics.roc_curve(labels, preds)
     auc = metrics.auc(fpr, tpr)
 
     return avg_loss, auc, preds, labels

@@ -152,8 +152,8 @@ def load_data_test(device, data_dir, labels_csv, batch_size=1, label_smoothing=0
     test_files = [f for f in test_files if f in labels_dict]
     test_files.sort()
 
-    test_dataset = MRDataset(data_dir, test_files, labels_dict, device, train=True, label_smoothing=label_smoothing)
+    test_dataset = MRDataset(data_dir, test_files, labels_dict, device, train=False, label_smoothing=label_smoothing)
 
-    test_loader = data.DataLoader(test_dataset, batch_size=batch_size, num_workers=0, shuffle=True, collate_fn=collate_fn)
+    test_loader = data.DataLoader(test_dataset, batch_size=batch_size, num_workers=0, shuffle=False, collate_fn=collate_fn)
 
     return test_loader

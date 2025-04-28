@@ -40,7 +40,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
         change = datetime.now() - start_time
         print('starting epoch {}. time passed: {}'.format(epoch+1, str(change)))
         
-        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer, accumulation_steps=8)
+        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer)
         print(f'train loss: {train_loss:0.4f}')
         print(f'train AUC: {train_auc:0.4f}')
 

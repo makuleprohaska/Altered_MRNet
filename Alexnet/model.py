@@ -18,47 +18,53 @@ class MRNet3(nn.Module):
         self.dropout_view3 = nn.Dropout(p=0.3)
 
         self.classifier1 = nn.Linear(int(256*3), 256)
-        # self.dropout = nn.Dropout(p=0.3) # test
-        # self.activation = nn.ReLU() 
+        
+        self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
+        
+        self.dropout = nn.Dropout(p=0.3) # test
+        self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 
-    def forward(self, x):
-        # x: list of [axial, coronal, sagittal] for each sample in batch
-        batch_size = len(x)  # Number of samples (e.g., 4)
-        print(f"batch_size: {batch_size}")
-        batch_features = []
+    def forward(self, x, original_slices):
         
-        for sample_views in x:  # Process each sample
-            x_1, x_2, x_3 = sample_views[0], sample_views[1], sample_views[2]  # [slices, 3, 224, 224]
-            
-            slices, c, h, w = x_1.size()  # slices can vary per sample
-            x_1 = x_1.view(slices, c, h, w)  # [slices, 3, 224, 224]
-            x_1 = self.model1.features(x_1)
-            x_1 = self.gap(x_1).view(slices, 256)  # [slices, 256]
-            x_1 = torch.max(x_1, 0)[0]  # [256]
-            x_1 = self.dropout_view1(x_1)
-
-            slices, c, h, w = x_2.size()
-            x_2 = x_2.view(slices, c, h, w)
-            x_2 = self.model2.features(x_2)
-            x_2 = self.gap(x_2).view(slices, 256)
-            x_2 = torch.max(x_2, 0)[0]
-            x_2 = self.dropout_view2(x_2)
-
-            slices, c, h, w = x_3.size()
-            x_3 = x_3.view(slices, c, h, w)
-            x_3 = self.model3.features(x_3)
-            x_3 = self.gap(x_3).view(slices, 256)
-            x_3 = torch.max(x_3, 0)[0]
-            x_3 = self.dropout_view3(x_3)
-            
-            x_stacked = torch.cat((x_1, x_2, x_3), dim=0)  # [768]
-            batch_features.append(x_stacked)
+        view_features = []
         
-        x_stacked = torch.stack(batch_features)  # [batch_size, 768]
-        x_stacked = self.classifier1(x_stacked)
+        for view in range(3):
+            
+            x_view = x[view]  # [B, S_max, 3, 224, 224]
+            B, S_max, _, H, W = x_view.shape
+            x_view = x_view.view(B * S_max, 3, H, W)
+            
+            if view == 0:
+                features = self.model1.features(x_view)
+            elif view == 1:
+                features = self.model2.features(x_view)
+            else:
+                features = self.model3.features(x_view)
+            
+            features = self.gap(features).view(B, S_max, 256)  # [B, S_max, 256]
+            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
+            mask = s_indices < original_slices[view].unsqueeze(1)
+            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
+            max_features = torch.max(features, dim=1)[0]  # [B, 256]
+            
+            if view == 0:
+                max_features = self.dropout_view1(max_features)
+            elif view == 1:
+                max_features = self.dropout_view2(max_features)
+            else:
+                max_features = self.dropout_view3(max_features)
+            
+            view_features.append(max_features)
+        
+        # Concatenate features from all views
+        x_stacked = torch.cat(view_features, dim=1)  # [B, 1536]
+        
+        # Fully connected layers with BN
+        x_stacked = self.classifier1(x_stacked)  # [B, 256]
+        x_stacked = self.bn1(x_stacked)  # Apply batch normalization
         x_stacked = self.dropout(x_stacked)
         x_stacked = self.activation(x_stacked)
-        x_stacked = self.classifier2(x_stacked)  # [batch_size, 1]
+        x_stacked = self.classifier2(x_stacked)  # [B, 1]
         
         return x_stacked

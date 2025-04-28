@@ -151,7 +151,6 @@ def load_data3(device, data_dir, labels_csv, batch_size=1, label_smoothing=0.1, 
         batch_size=batch_size, 
         num_workers=0, 
         shuffle=True, 
-        pin_memory=device.type == 'cuda',
         collate_fn=collate_fn
     )
     valid_loader = data.DataLoader(
@@ -159,7 +158,6 @@ def load_data3(device, data_dir, labels_csv, batch_size=1, label_smoothing=0.1, 
         batch_size=batch_size, 
         num_workers=0, 
         shuffle=False, 
-        pin_memory=device.type == 'cuda',
         collate_fn=collate_fn
     )
 

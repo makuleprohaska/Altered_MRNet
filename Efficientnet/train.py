@@ -23,8 +23,9 @@ def get_device(use_gpu, use_mps):
 def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience, batch_size, label_smoothing):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
-    
+    train_loader, _ = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+    _, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=1, label_smoothing=label_smoothing)
+
     model = MRNet3()
     model = model.to(device)
 

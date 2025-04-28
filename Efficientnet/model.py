@@ -18,19 +18,19 @@ class MRNet3(nn.Module):
         self.model3.classifier = nn.Identity()
         
         # Dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.7)
-        self.dropout_view2 = nn.Dropout(p=0.7)
-        self.dropout_view3 = nn.Dropout(p=0.7)
+        self.dropout_view1 = nn.Dropout(p=0.5)
+        self.dropout_view2 = nn.Dropout(p=0.5)
+        self.dropout_view3 = nn.Dropout(p=0.5)
         
         # Fully connected layers with batch normalization
         self.classifier1 = nn.Linear(1280 * 3, 1280)  # Concatenated features from 3 views (1280 * 3 = 3840)
         self.bn1 = nn.BatchNorm1d(1280)
-        self.dropout1 = nn.Dropout(p=0.6)
+        self.dropout1 = nn.Dropout(p=0.5)
         
         self.activation = nn.ReLU()
         
         self.classifier2 = nn.Linear(1280, 256)
-        self.dropout2 = nn.Dropout(p=0.4)
+        self.dropout2 = nn.Dropout(p=0.3)
         
         self.classifier3 = nn.Linear(256, 1)  # Fixed typo (Liner -> Linear)
 

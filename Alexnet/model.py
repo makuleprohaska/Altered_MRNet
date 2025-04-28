@@ -17,7 +17,7 @@ class MRNet3(nn.Module):
         self.dropout_view2 = nn.Dropout(p=0.7)
         self.dropout_view3 = nn.Dropout(p=0.7)
 
-        self.classifier1 = nn.Linear(int(256*3), 1)
+        self.classifier1 = nn.Linear(int(256*3), 256)
         
         self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
         

@@ -20,10 +20,10 @@ def get_device(use_gpu, use_mps):
     else:
         return torch.device("cpu")
 
-def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience, batch_size, label_smoothing):
+def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv, weight_decay, max_patience, batch_size, label_smoothing, augment):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
-    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+    train_loader, valid_loader = load_data3(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing, augment=augment)
     
     model = MRNet3()
     model = model.to(device)
@@ -39,7 +39,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
         change = datetime.now() - start_time
         print('starting epoch {}. time passed: {}'.format(epoch+1, str(change)))
         
-        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer)
+        train_loss, train_auc, _, _ = run_model(model, train_loader, train=True, optimizer=optimizer, augment=augment)
         print(f'train loss: {train_loss:0.4f}')
         print(f'train AUC: {train_auc:0.4f}')
 
@@ -73,6 +73,7 @@ def get_parser():
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--batch_size', default=4, type=int, help='Batch size for training and validation')
     parser.add_argument('--label_smoothing', default=0.1, type=float, help='Label smoothing factor')
+    parser.add_argument('--augment', action='store_true', default=True, help='Use data augmentation during training')
     return parser
 
 if __name__ == '__main__':
@@ -94,4 +95,4 @@ if __name__ == '__main__':
         json.dump(vars(args), out, indent=4)
 
     train3(args.rundir, args.epochs, args.learning_rate, 
-           args.gpu, args.mps, args.data_dir, args.labels_csv, args.weight_decay, args.max_patience, args.batch_size, args.label_smoothing)
+           args.gpu, args.mps, args.data_dir, args.labels_csv, args.weight_decay, args.max_patience, args.batch_size, args.label_smoothing, args.augment)

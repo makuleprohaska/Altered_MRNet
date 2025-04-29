@@ -68,7 +68,7 @@ def get_parser():
     parser.add_argument('--gpu', action='store_true', help='Use CUDA if available')
     parser.add_argument('--mps', action='store_true', help='Use MPS if available')
     parser.add_argument('--learning_rate', default=1e-04, type=float)
-    parser.add_argument('--weight_decay', default=1e-04, type=float)
+    parser.add_argument('--weight_decay', default=5e-04, type=float)
     parser.add_argument('--epochs', default=50, type=int)
     parser.add_argument('--max_patience', default=5, type=int)
     parser.add_argument('--batch_size', default=4, type=int, help='Batch size for training and validation')

@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 import kornia.augmentation as K
 import random 
 
-INPUT_DIM = 227
+INPUT_DIM = 224
 MAX_PIXEL_VAL = 1.0  
 MEAN = [0.485, 0.456, 0.406]  
 STDDEV = [0.229, 0.224, 0.225]  

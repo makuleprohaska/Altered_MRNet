@@ -55,7 +55,7 @@ def run_model(model, loader, train=False, optimizer=None):
         label = label.to(loader.dataset.device)
 
         if str(loader.dataset.device).startswith('cuda'):
-            with autocast(enabled=True):
+            with autocast(enabled=True, device_type='cuda'):
                 logit = model.forward(vol_device, original_slices)
                 loss = loader.dataset.weighted_loss(logit, label, train)
         else:

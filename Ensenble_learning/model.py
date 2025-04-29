@@ -135,13 +135,12 @@ class EnsembleModel(nn.Module):
         self.classifier2 = nn.Linear(256, 1)
 
     def forward(self, x, original_slices):
-        # x: [vol_227_axial, vol_227_coronal, vol_227_sagittal, vol_224_axial, vol_224_coronal, vol_224_sagittal]
+        # x: [vol_224_axial, vol_224_coronal, vol_224_sagittal]
 
-        # AlexNet features (227x227 inputs)
-        alexnet_input = x[:3]
+        # AlexNet features (224x224 inputs)
         view_features_alexnet = []
         for view in range(3):
-            x_view = alexnet_input[view]
+            x_view = x[view]
             B, S_max, _, H, W = x_view.shape
             x_view = x_view.view(B * S_max, 3, H, W)
             if view == 0:
@@ -162,10 +161,9 @@ class EnsembleModel(nn.Module):
         x_stacked_alexnet = torch.cat(view_features_alexnet, dim=1)  # [B, 768]
 
         # ResNet18 features (224x224 inputs)
-        resnet_input = x[3:]
         view_features_resnet = []
         for view in range(3):
-            x_view = resnet_input[view]
+            x_view = x[view]
             B, S_max, _, H, W = x_view.shape
             x_view = x_view.view(B * S_max, 3, H, W)
             if view == 0:

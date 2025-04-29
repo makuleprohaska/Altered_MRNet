@@ -5,9 +5,10 @@ import torch.nn.functional as F
 import torch.utils.data as data
 import pandas as pd
 from sklearn.model_selection import train_test_split
+import kornia.augmentation as K
+import random
 
-INPUT_DIM_227 = 227  # For AlexNet
-INPUT_DIM_224 = 224  # For ResNet18
+INPUT_DIM = 224  # Unified input size for both models
 MEAN = [0.485, 0.456, 0.406]
 STDDEV = [0.229, 0.224, 0.225]
 
@@ -47,25 +48,16 @@ class MRDataset(data.Dataset):
         for i in range(3):  # Axial, Coronal, Sagittal
             vol = np.load(self.paths[i][index]).astype(np.float32)
 
-            # Crop to 227x227 for AlexNet
-            pad_227 = int((vol.shape[2] - INPUT_DIM_227) / 2)
-            vol_227 = vol[:, pad_227:pad_227 + INPUT_DIM_227, pad_227:pad_227 + INPUT_DIM_227]
-            vol_227 = (vol_227 - np.min(vol_227)) / (np.max(vol_227) - np.min(vol_227) + 1e-6)
-            vol_227 = np.stack((vol_227,) * 3, axis=1)  # [slices, 3, 227, 227]
-            vol_227_tensor = torch.FloatTensor(vol_227).to(self.device)
+            # Crop to 224x224
+            pad = int((vol.shape[2] - INPUT_DIM) / 2)
+            vol = vol[:, pad:pad + INPUT_DIM, pad:pad + INPUT_DIM]
+            vol = (vol - np.min(vol)) / (np.max(vol) - np.min(vol) + 1e-6)
+            vol = np.stack((vol,) * 3, axis=1)  # [slices, 3, 224, 224]
+            vol_tensor = torch.FloatTensor(vol).to(self.device)
+            
             for c in range(3):
-                vol_227_tensor[:, c, :, :] = (vol_227_tensor[:, c, :, :] - MEAN[c]) / STDDEV[c]
-            vol_list.append(vol_227_tensor)
-
-            # Crop to 224x224 for ResNet18
-            pad_224 = int((vol.shape[2] - INPUT_DIM_224) / 2)
-            vol_224 = vol[:, pad_224:pad_224 + INPUT_DIM_224, pad_224:pad_224 + INPUT_DIM_224]
-            vol_224 = (vol_224 - np.min(vol_224)) / (np.max(vol_224) - np.min(vol_224) + 1e-6)
-            vol_224 = np.stack((vol_224,) * 3, axis=1)  # [slices, 3, 224, 224]
-            vol_224_tensor = torch.FloatTensor(vol_224).to(self.device)
-            for c in range(3):
-                vol_224_tensor[:, c, :, :] = (vol_224_tensor[:, c, :, :] - MEAN[c]) / STDDEV[c]
-            vol_list.append(vol_224_tensor)
+                vol_tensor[:, c, :, :] = (vol_tensor[:, c, :, :] - MEAN[c]) / STDDEV[c]
+            vol_list.append(vol_tensor)
 
         label_tensor = torch.FloatTensor([self.labels[index]]).to(self.device)
         return vol_list, label_tensor
@@ -75,29 +67,20 @@ class MRDataset(data.Dataset):
 
 def collate_fn(batch):
     device = batch[0][0][0].device
-    vol_227_axial_list = [sample[0][0] for sample in batch]
-    vol_227_coronal_list = [sample[0][1] for sample in batch]
-    vol_227_sagittal_list = [sample[0][2] for sample in batch]
-    vol_224_axial_list = [sample[0][3] for sample in batch]
-    vol_224_coronal_list = [sample[0][4] for sample in batch]
-    vol_224_sagittal_list = [sample[0][5] for sample in batch]
+    vol_axial_list = [sample[0][0] for sample in batch]
+    vol_coronal_list = [sample[0][1] for sample in batch]
+    vol_sagittal_list = [sample[0][2] for sample in batch]
 
-    padded_vol_227_axial = torch.nn.utils.rnn.pad_sequence(vol_227_axial_list, batch_first=True)
-    padded_vol_227_coronal = torch.nn.utils.rnn.pad_sequence(vol_227_coronal_list, batch_first=True)
-    padded_vol_227_sagittal = torch.nn.utils.rnn.pad_sequence(vol_227_sagittal_list, batch_first=True)
-    padded_vol_224_axial = torch.nn.utils.rnn.pad_sequence(vol_224_axial_list, batch_first=True)
-    padded_vol_224_coronal = torch.nn.utils.rnn.pad_sequence(vol_224_coronal_list, batch_first=True)
-    padded_vol_224_sagittal = torch.nn.utils.rnn.pad_sequence(vol_224_sagittal_list, batch_first=True)
+    padded_vol_axial = torch.nn.utils.rnn.pad_sequence(vol_axial_list, batch_first=True)
+    padded_vol_coronal = torch.nn.utils.rnn.pad_sequence(vol_coronal_list, batch_first=True)
+    padded_vol_sagittal = torch.nn.utils.rnn.pad_sequence(vol_sagittal_list, batch_first=True)
 
-    original_slices_axial = torch.tensor([v.shape[0] for v in vol_227_axial_list], device=device)
-    original_slices_coronal = torch.tensor([v.shape[0] for v in vol_227_coronal_list], device=device)
-    original_slices_sagittal = torch.tensor([v.shape[0] for v in vol_227_sagittal_list], device=device)
+    original_slices_axial = torch.tensor([v.shape[0] for v in vol_axial_list], device=device)
+    original_slices_coronal = torch.tensor([v.shape[0] for v in vol_coronal_list], device=device)
+    original_slices_sagittal = torch.tensor([v.shape[0] for v in vol_sagittal_list], device=device)
 
     labels = torch.stack([sample[1] for sample in batch])
-    vol_padded = [
-        padded_vol_227_axial, padded_vol_227_coronal, padded_vol_227_sagittal,
-        padded_vol_224_axial, padded_vol_224_coronal, padded_vol_224_sagittal
-    ]
+    vol_padded = [padded_vol_axial, padded_vol_coronal, padded_vol_sagittal]
     return vol_padded, labels, [original_slices_axial, original_slices_coronal, original_slices_sagittal]
 
 def load_data(device, data_dir, labels_csv, batch_size=1, label_smoothing=0.1, augment=False):

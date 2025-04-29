@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 from torch.utils.data import DataLoader
 from model import EnsembleModel
-from loader import load_data, load_data_test
+from loader import load_data
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -60,20 +60,9 @@ def train_ensemble(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, la
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
 
-    # Load data
-    labels_df = pd.read_csv(labels_csv, header=None, names=['filename', 'label'])
-    labels_df['filename'] = labels_df['filename'].apply(lambda x: f"{int(x):04d}.npy")
-    labels_dict = dict(zip(labels_df['filename'], labels_df['label']))
-    all_files = [f for f in os.listdir(f"{data_dir}/axial") if f.endswith(".npy") and f in labels_dict]
-    all_files.sort()
-    labels = [labels_dict[file] for file in all_files]
-    train_files, valid_files = train_test_split(all_files, test_size=0.2, random_state=42, stratify=labels)
-
-    train_dataset = MRDataset(data_dir, train_files, labels_dict, device, train=True, label_smoothing=label_smoothing)
-    valid_dataset = MRDataset(data_dir, valid_files, labels_dict, device, train=False, label_smoothing=0)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    
+    train_loader, valid_loader = load_data(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
+    
 
     # Initialize model
     model = EnsembleModel(alexnet_model_path, resnet_model_path).to(device)

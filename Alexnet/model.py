@@ -18,13 +18,13 @@ class MRNet3(nn.Module):
         self.bn_view3 = nn.BatchNorm2d(256)
         
         # Add dropout for each view's features
-        self.dropout_view1 = nn.Dropout(p=0.5) 
-        self.dropout_view2 = nn.Dropout(p=0.5)
-        self.dropout_view3 = nn.Dropout(p=0.5)
+        self.dropout_view1 = nn.Dropout(p=0.6) 
+        self.dropout_view2 = nn.Dropout(p=0.6)
+        self.dropout_view3 = nn.Dropout(p=0.6)
 
         self.classifier1 = nn.Linear(int(256*3), 256)
         self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
-        self.dropout = nn.Dropout(p=0.5) # test
+        self.dropout = nn.Dropout(p=0.6) # test
         self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 

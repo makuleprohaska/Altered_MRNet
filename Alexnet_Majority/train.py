@@ -58,6 +58,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
             file_name = f'val{val_auc:0.4f}_train{train_auc:0.4f}_epoch{epoch+1}'
             save_path = Path(rundir) / file_name 
             torch.save(model.state_dict(), save_path)
+            print(f"Model saved to {save_path}")
 
         # Log metrics to file
         with open(os.path.join(rundir, 'metrics.txt'), 'a') as f:

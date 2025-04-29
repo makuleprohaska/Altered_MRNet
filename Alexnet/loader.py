@@ -71,9 +71,9 @@ class MRDataset(data.Dataset):
             # Convert to tensor
             vol_tensor = torch.FloatTensor(vol).to(self.device)  # Shape: (slices, 3, 227, 227)
 
-            # Apply augmentations if training and augment is enabled
-            if self.train and self.augment and random.random() < 0:
-                vol_tensor = self.apply_augmentations(vol_tensor)
+            # # Apply augmentations if training and augment is enabled
+            # if self.train and self.augment and random.random() < 0:
+            #     vol_tensor = self.apply_augmentations(vol_tensor)
 
             # Apply ImageNet normalization per channel
             for c in range(3):
@@ -85,22 +85,22 @@ class MRDataset(data.Dataset):
         
         return vol_list, label_tensor
     
-    def apply_augmentations(self, vol_tensor):
-        # Ensure vol_tensor has a batch dimension for kornia: [slices, 3, H, W] -> [slices, 3, H, W]
-        # Kornia expects [B, C, H, W], so we treat each slice as a batch
-        #slices = vol_tensor.shape[0]
+    # def apply_augmentations(self, vol_tensor):
+    #     # Ensure vol_tensor has a batch dimension for kornia: [slices, 3, H, W] -> [slices, 3, H, W]
+    #     # Kornia expects [B, C, H, W], so we treat each slice as a batch
+    #     #slices = vol_tensor.shape[0]
         
-        # Apply augmentations slice-wise with consistent parameters
-        aug = K.AugmentationSequential(
-            K.RandomRotation(degrees=25, p=0.5),
-            K.RandomAffine(degrees=0, translate=(25/INPUT_DIM, 25/INPUT_DIM), p=0.5),
-            K.RandomHorizontalFlip(p=0.5),
-            same_on_batch=True  # Ensure consistent transformations across slices
-        ).to(self.device)
+    #     # Apply augmentations slice-wise with consistent parameters
+    #     aug = K.AugmentationSequential(
+    #         K.RandomRotation(degrees=25, p=0.5),
+    #         K.RandomAffine(degrees=0, translate=(25/INPUT_DIM, 25/INPUT_DIM), p=0.5),
+    #         K.RandomHorizontalFlip(p=0.5),
+    #         same_on_batch=True  # Ensure consistent transformations across slices
+    #     ).to(self.device)
         
-        vol_tensor = aug(vol_tensor)  # Shape: [slices, 3, 227, 227]
+    #     vol_tensor = aug(vol_tensor)  # Shape: [slices, 3, 227, 227]
         
-        return vol_tensor
+    #     return vol_tensor
 
     def __len__(self):
         return len(self.labels)

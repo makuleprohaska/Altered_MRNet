@@ -72,7 +72,7 @@ class MRDataset(data.Dataset):
             vol_tensor = torch.FloatTensor(vol).to(self.device)  # Shape: (slices, 3, 227, 227)
 
             # Apply augmentations if training and augment is enabled
-            if self.train and self.augment and random.random() < 0.4:
+            if self.train and self.augment and random.random() < 0.3:
                 vol_tensor = self.apply_augmentations(vol_tensor)
 
             # Apply ImageNet normalization per channel

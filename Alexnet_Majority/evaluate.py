@@ -64,7 +64,7 @@ def run_model(model, loader, train=False, optimizer=None, eps: float = 0.0):
         label = label.to(device)                       # [batch_size,1]
         vol_lists = [[view.to(device) for view in views] for views in vol_lists]
 
-        with torch.autocast():
+        with torch.autocast(device_type=device.type, enabled=True):
             logits = model(vol_lists)                      # [batch_size,1]
         probs  = torch.sigmoid(logits)                 # [batch_size,1]
 

@@ -24,7 +24,7 @@ class MRNet3(nn.Module):
 
         self.classifier1 = nn.Linear(int(256*3), 256)
         self.bn1 = nn.BatchNorm1d(256)  # BN after classifier1
-        self.dropout = nn.Dropout(p=0.6) # test
+        self.dropout = nn.Dropout(p=0.2) # test
         self.activation = nn.ReLU() 
         self.classifier2 = nn.Linear(256, 1)
 

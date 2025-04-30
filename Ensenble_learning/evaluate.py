@@ -72,8 +72,6 @@ def evaluate(split, model_path, model1_path, model2_path, use_gpu, use_mps, data
 def get_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, required=True, help='Path to trained ensemble model')
-    parser.add_argument('--model1_path', type=str, required=True, help='Path to pre-trained AlexNet model')
-    parser.add_argument('--model2_path', type=str, required=True, help='Path to pre-trained ResNet model')
     parser.add_argument('--split', type=str, required=True, choices=['train', 'valid', 'test'])
     parser.add_argument('--data_dir', type=str, required=True)
     parser.add_argument('--labels_csv', type=str, required=True)

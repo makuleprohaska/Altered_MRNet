@@ -65,9 +65,9 @@ class EnsembleMRNet(nn.Module):
         self.model_resnet = MRNetResNet()
         
         # Load pre-trained weights
-        if model1_path is None:
+        if model1_path is not None:
             self.model_alex.load_state_dict(torch.load(model1_path, map_location=device, weights_only=True))
-        if model2_path is None:
+        if model2_path is not None:
             self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device, weights_only=True))
         
         # Freeze CNN parts

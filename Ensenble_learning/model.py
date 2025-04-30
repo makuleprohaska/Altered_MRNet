@@ -3,58 +3,45 @@ import torch.nn as nn
 from torchvision import models
 from torchvision.models import AlexNet_Weights, ResNet18_Weights
 
-class MRNet3_AlexNet(nn.Module):
-    def __init__(self):
+class MRNetAlex(nn.Module):
+    """Model 1: AlexNet-based model with separate classifiers per view."""
+    def __init__(self, use_batchnorm=False):
         super().__init__()
-        self.model1 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
-        self.model2 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
-        self.model3 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
-        self.gap = nn.AdaptiveAvgPool2d(1)
-        self.bn_view1 = nn.BatchNorm2d(256)
-        self.bn_view2 = nn.BatchNorm2d(256)
-        self.bn_view3 = nn.BatchNorm2d(256)
-        self.classifier1 = nn.Linear(256 * 3, 256)
-        self.bn1 = nn.BatchNorm1d(256)
-        self.activation = nn.ReLU()
-        self.classifier2 = nn.Linear(256, 1)
+        self.model1 = models.alexnet(weights=AlexNet_Weights.DEFAULT)  # Axial
+        self.model2 = models.alexnet(weights=AlexNet_Weights.DEFAULT)  # Coronal
+        self.model3 = models.alexnet(weights=AlexNet_Weights.DEFAULT)  # Sagittal
+        self.gap = nn.AdaptiveMaxPool2d(1)
+        self.use_batchnorm = use_batchnorm
+        n = 0.15
+        self.dropout_view1 = nn.Dropout(p=n)
+        self.dropout_view2 = nn.Dropout(p=n)
+        self.dropout_view3 = nn.Dropout(p=n)
 
-    def forward(self, x, original_slices):
-        view_features = []
-        for view in range(3):
-            x_view = x[view]
-            B, S_max, _, H, W = x_view.shape
-            x_view = x_view.view(B * S_max, 3, H, W)
-            if view == 0:
-                features = self.model1.features(x_view)
-                features = self.bn_view1(features)
-            elif view == 1:
-                features = self.model2.features(x_view)
-                features = self.bn_view2(features)
-            else:
-                features = self.model3.features(x_view)
-                features = self.bn_view3(features)
-            features = self.gap(features).view(B, S_max, 256)
-            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
-            mask = s_indices < original_slices[view].unsqueeze(1)
-            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
-            max_features = torch.max(features, dim=1)[0]
-            view_features.append(max_features)
-        x_stacked = torch.cat(view_features, dim=1)
-        x_stacked = self.classifier1(x_stacked)
-        x_stacked = self.bn1(x_stacked)
-        x_stacked = self.activation(x_stacked)
-        x_stacked = self.classifier2(x_stacked)
-        return x_stacked
+        # Classifiers for each view
+        classifier_layers_axial = [nn.Linear(256, 256)]
+        if self.use_batchnorm:
+            classifier_layers_axial.append(nn.BatchNorm1d(256))
+        self.classifier1_axial = nn.Sequential(*classifier_layers_axial)
+        self.classifier1_coronal = nn.Sequential(*[nn.Linear(256, 256)] + ([nn.BatchNorm1d(256)] if self.use_batchnorm else []))
+        self.classifier1_sagittal = nn.Sequential(*[nn.Linear(256, 256)] + ([nn.BatchNorm1d(256)] if self.use_batchnorm else []))
+        self.classifier2_axial = nn.Linear(256, 1)
+        self.classifier2_coronal = nn.Linear(256, 1)
+        self.classifier2_sagittal = nn.Linear(256, 1)
 
-class MRNet3_ResNet(nn.Module):
+    def forward(self, x):
+        # Not implemented as it's not needed for the ensemble
+        pass
+
+class MRNetResNet(nn.Module):
+    """Model 2: ResNet18-based model with feature concatenation."""
     def __init__(self):
         super().__init__()
         self.model1 = models.resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model1 = nn.Sequential(*list(self.model1.children())[:-1])  # Axial
         self.model2 = models.resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model2 = nn.Sequential(*list(self.model2.children())[:-1])  # Coronal
         self.model3 = models.resnet18(weights=ResNet18_Weights.DEFAULT)
-        self.model1 = nn.Sequential(*list(self.model1.children())[:-1])
-        self.model2 = nn.Sequential(*list(self.model2.children())[:-1])
-        self.model3 = nn.Sequential(*list(self.model3.children())[:-1])
+        self.model3 = nn.Sequential(*list(self.model3.children())[:-1])  # Sagittal
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.dropout_view1 = nn.Dropout(p=0.7)
         self.dropout_view2 = nn.Dropout(p=0.7)
@@ -66,127 +53,101 @@ class MRNet3_ResNet(nn.Module):
         self.classifier2 = nn.Linear(256, 1)
 
     def forward(self, x, original_slices):
-        view_features = []
-        for view in range(3):
-            x_view = x[view]
-            B, S_max, _, H, W = x_view.shape
-            x_view = x_view.view(B * S_max, 3, H, W)
-            if view == 0:
-                features = self.model1(x_view)
-            elif view == 1:
-                features = self.model2(x_view)
-            else:
-                features = self.model3(x_view)
-            features = self.gap(features).view(B, S_max, 512)
-            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
-            mask = s_indices < original_slices[view].unsqueeze(1)
-            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
-            max_features = torch.max(features, dim=1)[0]
-            if view == 0:
-                max_features = self.dropout_view1(max_features)
-            elif view == 1:
-                max_features = self.dropout_view2(max_features)
-            else:
-                max_features = self.dropout_view3(max_features)
-            view_features.append(max_features)
-        x_stacked = torch.cat(view_features, dim=1)
-        x_stacked = self.classifier1(x_stacked)
-        x_stacked = self.bn1(x_stacked)
-        x_stacked = self.dropout(x_stacked)
-        x_stacked = self.activation(x_stacked)
-        x_stacked = self.classifier2(x_stacked)
-        return x_stacked
+        # Not implemented as it's not needed for the ensemble
+        pass
 
-class EnsembleModel(nn.Module):
-    def __init__(self, alexnet_model_path, resnet_model_path):
+class EnsembleMRNet(nn.Module):
+    """Ensemble model combining CNNs from MRNetAlex and MRNetResNet with a new dense classifier."""
+    def __init__(self, model1_path, model2_path, device):
         super().__init__()
-
-        # Load AlexNet-based model
-        self.alexnet_model = MRNet3_AlexNet()
-        state_dict = torch.load(alexnet_model_path, map_location='cpu')
-        self.alexnet_model.load_state_dict(state_dict)
+        # Initialize base models
+        self.model_alex = MRNetAlex()
+        self.model_resnet = MRNetResNet()
         
-        # Freeze AlexNet CNN parts
-        for param in self.alexnet_model.model1.parameters():
-            param.requires_grad = False
-        for param in self.alexnet_model.model2.parameters():
-            param.requires_grad = False
-        for param in self.alexnet_model.model3.parameters():
-            param.requires_grad = False
-
-        # Load ResNet18-based model
-        self.resnet_model = MRNet3_ResNet()
-        state_dict = torch.load(resnet_model_path, map_location='cpu')
-        self.resnet_model.load_state_dict(state_dict)
+        # Load pre-trained weights
+        self.model_alex.load_state_dict(torch.load(model1_path, map_location=device))
+        self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device))
         
-        # Freeze ResNet18 CNN parts
-        for param in self.resnet_model.model1.parameters():
-            param.requires_grad = False
-        for param in self.resnet_model.model2.parameters():
-            param.requires_grad = False
-        for param in self.resnet_model.model3.parameters():
-            param.requires_grad = False
+        # Freeze CNN parts
+        for model in [self.model_alex.model1, self.model_alex.model2, self.model_alex.model3]:
+            for param in model.features.parameters():
+                param.requires_grad = False
+        for model in [self.model_resnet.model1, self.model_resnet.model2, self.model_resnet.model3]:
+            for param in model.parameters():
+                param.requires_grad = False
+        
+        # Define pooling layers consistent with original models
+        self.gap_max = nn.AdaptiveMaxPool2d(1)  # For AlexNet
+        self.gap_avg = nn.AdaptiveAvgPool2d(1)  # For ResNet18
+        
+        # Define dropout layers for each backbone per view
+        self.dropout_alex_view1 = nn.Dropout(p=0.15)
+        self.dropout_alex_view2 = nn.Dropout(p=0.15)
+        self.dropout_alex_view3 = nn.Dropout(p=0.15)
+        self.dropout_resnet_view1 = nn.Dropout(p=0.7)
+        self.dropout_resnet_view2 = nn.Dropout(p=0.7)
+        self.dropout_resnet_view3 = nn.Dropout(p=0.7)
+        
+        # New dense classifier
+        self.dense = nn.Sequential(
+            nn.Linear(2304, 256),       # 256 * 3 + 512 * 3 = 2304
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(256, 1)
+        )
 
-        # New classifier for combined features (768 + 1536 = 2304)
-        self.classifier1 = nn.Linear(768 + 1536, 256)
-        self.bn1 = nn.BatchNorm1d(256)
-        self.dropout = nn.Dropout(p=0.5)
-        self.activation = nn.ReLU()
-        self.classifier2 = nn.Linear(256, 1)
-
-    def forward(self, x, original_slices):
-        # x: [vol_224_axial, vol_224_coronal, vol_224_sagittal]
-
-        # AlexNet features (224x224 inputs)
-        view_features_alexnet = []
+    def forward(self, padded_views, original_slices):
+        """Forward pass: Extract features from both CNNs, concatenate, and classify."""
+        B = padded_views[0].shape[0]
+        view_features = []
+        
         for view in range(3):
-            x_view = x[view]
-            B, S_max, _, H, W = x_view.shape
-            x_view = x_view.view(B * S_max, 3, H, W)
+            x_view = padded_views[view]  # [B, S_max, 3, 224, 224]
+            S_max = x_view.shape[1]
+            x_view_flat = x_view.view(B * S_max, 3, 224, 224)
+            
+            # AlexNet features
             if view == 0:
-                features = self.alexnet_model.model1.features(x_view)
-                features = self.alexnet_model.bn_view1(features)
+                feat_alex = self.model_alex.model1.features(x_view_flat)  # [B*S_max, 256, 6, 6]
             elif view == 1:
-                features = self.alexnet_model.model2.features(x_view)
-                features = self.alexnet_model.bn_view2(features)
+                feat_alex = self.model_alex.model2.features(x_view_flat)
             else:
-                features = self.alexnet_model.model3.features(x_view)
-                features = self.alexnet_model.bn_view3(features)
-            features = self.alexnet_model.gap(features).view(B, S_max, 256)
-            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
-            mask = s_indices < original_slices[view].unsqueeze(1)
-            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
-            max_features = torch.max(features, dim=1)[0]
-            view_features_alexnet.append(max_features)
-        x_stacked_alexnet = torch.cat(view_features_alexnet, dim=1)  # [B, 768]
-
-        # ResNet18 features (224x224 inputs)
-        view_features_resnet = []
-        for view in range(3):
-            x_view = x[view]
-            B, S_max, _, H, W = x_view.shape
-            x_view = x_view.view(B * S_max, 3, H, W)
+                feat_alex = self.model_alex.model3.features(x_view_flat)
+            feat_alex = self.gap_max(feat_alex).view(B, S_max, 256)
+            mask = torch.arange(S_max, device=feat_alex.device).expand(B, S_max) < original_slices[view].unsqueeze(1)
+            feat_alex = feat_alex.masked_fill(~mask.unsqueeze(2), -float('inf'))
+            max_feat_alex = torch.max(feat_alex, dim=1)[0]  # [B, 256]
+            
+            # ResNet18 features
             if view == 0:
-                features = self.resnet_model.model1(x_view)
+                feat_resnet = self.model_resnet.model1(x_view_flat)  # [B*S_max, 512, 7, 7]
             elif view == 1:
-                features = self.resnet_model.model2(x_view)
+                feat_resnet = self.model_resnet.model2(x_view_flat)
             else:
-                features = self.resnet_model.model3(x_view)
-            features = self.resnet_model.gap(features).view(B, S_max, 512)
-            s_indices = torch.arange(S_max, device=features.device).unsqueeze(0).expand(B, S_max)
-            mask = s_indices < original_slices[view].unsqueeze(1)
-            features = features.masked_fill(~mask.unsqueeze(2), -float('inf'))
-            max_features = torch.max(features, dim=1)[0]
-            view_features_resnet.append(max_features)
-        x_stacked_resnet = torch.cat(view_features_resnet, dim=1)  # [B, 1536]
-
-        # Combine features
-        x_combined = torch.cat([x_stacked_alexnet, x_stacked_resnet], dim=1)  # [B, 2304]
-
-        # New classifier
-        x = self.classifier1(x_combined)
-        x = self.bn1(x)
-        x = self.dropout(x)
-        x = self.activation(x)
-        x = self.classifier2(x)
-        return x
+                feat_resnet = self.model_resnet.model3(x_view_flat)
+            feat_resnet = self.gap_avg(feat_resnet).view(B, S_max, 512)
+            feat_resnet = feat_resnet.masked_fill(~mask.unsqueeze(2), -float('inf'))
+            max_feat_resnet = torch.max(feat_resnet, dim=1)[0]  # [B, 512]
+            
+            # Apply dropout
+            if view == 0:
+                max_feat_alex = self.dropout_alex_view1(max_feat_alex)
+                max_feat_resnet = self.dropout_resnet_view1(max_feat_resnet)
+            elif view == 1:
+                max_feat_alex = self.dropout_alex_view2(max_feat_alex)
+                max_feat_resnet = self.dropout_resnet_view2(max_feat_resnet)
+            else:
+                max_feat_alex = self.dropout_alex_view3(max_feat_alex)
+                max_feat_resnet = self.dropout_resnet_view3(max_feat_resnet)
+            
+            # Concatenate features for this view
+            combined_feat = torch.cat([max_feat_alex, max_feat_resnet], dim=1)  # [B, 768]
+            view_features.append(combined_feat)
+        
+        # Concatenate all views
+        all_features = torch.cat(view_features, dim=1)  # [B, 2304]
+        
+        # Dense classifier
+        logits = self.dense(all_features)  # [B, 1]
+        return logits

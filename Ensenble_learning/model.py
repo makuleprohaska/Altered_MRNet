@@ -58,15 +58,17 @@ class MRNetResNet(nn.Module):
 
 class EnsembleMRNet(nn.Module):
     """Ensemble model combining CNNs from MRNetAlex and MRNetResNet with a new dense classifier."""
-    def __init__(self, model1_path, model2_path, device):
+    def __init__(self, model1_path=None, model2_path=None, device="cpu"):
         super().__init__()
         # Initialize base models
         self.model_alex = MRNetAlex()
         self.model_resnet = MRNetResNet()
         
         # Load pre-trained weights
-        self.model_alex.load_state_dict(torch.load(model1_path, map_location=device, weights_only=True))
-        self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device, weights_only=True))
+        if model1_path is None:
+            self.model_alex.load_state_dict(torch.load(model1_path, map_location=device, weights_only=True))
+        if model2_path is None:
+            self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device, weights_only=True))
         
         # Freeze CNN parts
         for model in [self.model_alex.model1, self.model_alex.model2, self.model_alex.model3]:

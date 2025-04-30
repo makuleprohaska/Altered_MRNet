@@ -65,8 +65,8 @@ class EnsembleMRNet(nn.Module):
         self.model_resnet = MRNetResNet()
         
         # Load pre-trained weights
-        self.model_alex.load_state_dict(torch.load(model1_path, map_location=device))
-        self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device))
+        self.model_alex.load_state_dict(torch.load(model1_path, map_location=device, weights_only=True))
+        self.model_resnet.load_state_dict(torch.load(model2_path, map_location=device, weights_only=True))
         
         # Freeze CNN parts
         for model in [self.model_alex.model1, self.model_alex.model2, self.model_alex.model3]:
@@ -90,10 +90,14 @@ class EnsembleMRNet(nn.Module):
         
         # New dense classifier
         self.dense = nn.Sequential(
-            nn.Linear(2304, 256),       # 256 * 3 + 512 * 3 = 2304
-            nn.BatchNorm1d(256),
+            nn.Linear(2304, 1024),       # 256 * 3 + 512 * 3 = 2304
+            nn.BatchNorm1d(1024),
             nn.ReLU(),
-            nn.Dropout(p=0.5),
+            nn.Dropout(p=0.6),
+            nn.Linear(1024, 256),       # 256 * 3 + 512 * 3 = 2304
+            nn.BatchNorm1d(1024),
+            nn.ReLU(),
+            nn.Dropout(p=0.3),
             nn.Linear(256, 1)
         )
 

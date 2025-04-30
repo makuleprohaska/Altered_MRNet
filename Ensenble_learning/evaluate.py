@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from tqdm import tqdm
 from loader import load_data3, load_data_test
 from model import EnsembleMRNet
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 
 def get_device(use_gpu, use_mps):
     if use_gpu and torch.cuda.is_available():
@@ -30,7 +30,7 @@ def run_model(model, loader, train=False, optimizer=None):
         padded_views, label, original_slices = batch
         label = label.to(loader.dataset.device)
         if str(loader.dataset.device).startswith('cuda'):
-            with autocast(enabled=True):
+            with autocast(device_type='cuda', enabled=True):
                 logit = model(padded_views, original_slices)
                 loss = loader.dataset.weighted_loss(logit, label, train)
         else:

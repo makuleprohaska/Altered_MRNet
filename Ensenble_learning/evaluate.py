@@ -51,7 +51,7 @@ def run_model(model, loader, train=False, optimizer=None):
     auc = metrics.auc(fpr, tpr)
     return avg_loss, auc, preds, labels
 
-def evaluate(split, model_path, model1_path, model2_path, use_gpu, use_mps, data_dir, labels_csv, batch_size, label_smoothing):
+def evaluate(split, model_path, use_gpu, use_mps, data_dir, labels_csv, batch_size, label_smoothing):
     device = get_device(use_gpu, use_mps)
     print(f"Using device: {device}")
     if split in ['train', 'valid']:
@@ -61,7 +61,7 @@ def evaluate(split, model_path, model1_path, model2_path, use_gpu, use_mps, data
         loader = load_data_test(device, data_dir, labels_csv, batch_size=batch_size, label_smoothing=label_smoothing)
     else:
         raise ValueError("split must be 'train', 'valid', or 'test'")
-    model = EnsembleMRNet(model1_path, model2_path, device)
+    model = EnsembleMRNet(device=device)
     model.load_state_dict(torch.load(model_path, map_location=device))
     model = model.to(device)
     loss, auc, preds, labels = run_model(model, loader, train=False)
@@ -77,10 +77,10 @@ def get_parser():
     parser.add_argument('--labels_csv', type=str, required=True)
     parser.add_argument('--gpu', action='store_true')
     parser.add_argument('--mps', action='store_true')
-    parser.add_argument('--batch_size', default=4, type=int)
-    parser.add_argument('--label_smoothing', default=0.1, type=float)
+    parser.add_argument('--batch_size', default=1 , type=int)
+    parser.add_argument('--label_smoothing', default=0.0, type=float)
     return parser
 
 if __name__ == '__main__':
     args = get_parser().parse_args()
-    evaluate(args.split, args.model_path, args.model1_path, args.model2_path, args.gpu, args.mps, args.data_dir, args.labels_csv, args.batch_size, args.label_smoothing)
+    evaluate(args.split, args.model_path, args.gpu, args.mps, args.data_dir, args.labels_csv, args.batch_size, args.label_smoothing)

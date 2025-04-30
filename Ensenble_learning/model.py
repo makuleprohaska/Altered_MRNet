@@ -90,15 +90,11 @@ class EnsembleMRNet(nn.Module):
         
         # New dense classifier
         self.dense = nn.Sequential(
-            nn.Linear(2304, 1024),       # 256 * 3 + 512 * 3 = 2304
-            nn.BatchNorm1d(1024),
+            nn.Linear(2304, 512),  # Input: 2304, Output: 512
+            nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Dropout(p=0.6),
-            nn.Linear(1024, 256),       # 256 * 3 + 512 * 3 = 2304
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(p=0.3),
-            nn.Linear(256, 1)
+            nn.Dropout(p=0.5),     # Moderate dropout to prevent overfitting
+            nn.Linear(512, 1)      # Output: 1 for binary classification
         )
 
     def forward(self, padded_views, original_slices):

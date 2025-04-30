@@ -13,7 +13,7 @@ class MRNet3(nn.Module):
         self.gap = nn.AdaptiveMaxPool2d(1)
         # self.gap = nn.AdaptiveAvgPool2d(1)
         self.use_batchnorm = use_batchnorm
-        n = 0.3
+        n = 0.4
         # Dropout for each view's features
         self.dropout_view1 = nn.Dropout(p=n)
         self.dropout_view2 = nn.Dropout(p=n)

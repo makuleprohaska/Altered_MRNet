@@ -95,7 +95,7 @@ class EnsembleMRNet(nn.Module):
             nn.ReLU(),
             nn.Dropout(p=0.6),
             nn.Linear(1024, 256),       # 256 * 3 + 512 * 3 = 2304
-            nn.BatchNorm1d(1024),
+            nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(p=0.3),
             nn.Linear(256, 1)

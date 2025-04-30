@@ -49,7 +49,7 @@ class MRDataset(data.Dataset):
             vol_tensor = torch.FloatTensor(vol).to(self.device)
             
             # Apply augmentations only during training
-            if self.is_training and random.random() < 0.5:
+            if self.is_training and random.random() < 0.3:
                 vol_tensor = self.apply_augmentations(vol_tensor)
 
             for c in range(3):

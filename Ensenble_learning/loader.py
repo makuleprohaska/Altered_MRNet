@@ -59,14 +59,18 @@ class MRDataset(data.Dataset):
         return vol_list, label_tensor
 
     def apply_augmentations(self, vol_tensor):
-        # Apply augmentations slice-wise
-        for slice_idx in range(vol_tensor.shape[0]):
-            slice_tensor = vol_tensor[slice_idx:slice_idx+1]  # Keep batch dim
-            slice_tensor = K.RandomRotation(degrees=25)(slice_tensor)
-            slice_tensor = K.RandomAffine(degrees=0, translate=(25/224, 25/224))(slice_tensor)
-            if random.random() > 0.5:
-                slice_tensor = K.RandomHorizontalFlip(p=1.0)(slice_tensor)
-            vol_tensor[slice_idx] = slice_tensor.squeeze(0)
+        # vol_tensor shape: [slices, channels, height, width]
+        # Reshape to treat slices as batch dimension
+        vol_tensor = vol_tensor.permute(1, 0, 2, 3)  # [channels, slices, height, width]
+        
+        # Apply augmentations
+        vol_tensor = K.RandomRotation(degrees=25, keepdim=True)(vol_tensor)
+        vol_tensor = K.RandomAffine(degrees=0, translate=(25/224, 25/224), keepdim=True)(vol_tensor)
+        if random.random() > 0.5:
+            vol_tensor = K.RandomHorizontalFlip(p=1.0, keepdim=True)(vol_tensor)
+        
+        # Reshape back to [slices, channels, height, width]
+        vol_tensor = vol_tensor.permute(1, 0, 2, 3)
         return vol_tensor
 
     def __len__(self):

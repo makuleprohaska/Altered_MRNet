@@ -51,6 +51,7 @@ class MRDataset(data.Dataset):
             # Apply augmentations only during training
             if self.is_training:
                 vol_tensor = self.apply_augmentations(vol_tensor)
+
             for c in range(3):
                 vol_tensor[:, c, :, :] = (vol_tensor[:, c, :, :] - MEAN[c]) / STDDEV[c]
             vol_list.append(vol_tensor)

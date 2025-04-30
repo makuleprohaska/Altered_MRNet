@@ -39,6 +39,7 @@ def train3(rundir, epochs, learning_rate, use_gpu, use_mps, data_dir, labels_csv
 
     epsilon = args.eps
     print(f"Value of eps:{epsilon}")
+    print(f"Using data augmentation: {augment}")
     for epoch in range(epochs):
         change = datetime.now() - start_time
         print('starting epoch {}. time passed: {}'.format(epoch+1, str(change)))

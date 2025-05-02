@@ -17,7 +17,8 @@ class PBTMember:
         self.device = device
         self.batch_size = batch_size
 
-        self.model = MRNet3(dropout=hyperparams['dropout'])
+        use_batchnorm = batch_size > 1
+        self.model = MRNet3(dropout=hyperparams['dropout'], use_batchnorm=use_batchnorm)
         self.model.to(device)
 
         self.optimizer = torch.optim.Adam(
@@ -42,9 +43,9 @@ def mutate_hyperparams(hparams):
         return max(min(new_value, bounds[1]), bounds[0])
 
     return {
-        "learning_rate": mutate(hparams["learning_rate"], bounds=(1e-5, 1e-1)),
+        "learning_rate": mutate(hparams["learning_rate"], bounds=(1e-6, 1e-3)),
         "weight_decay": mutate(hparams["weight_decay"], bounds=(1e-6, 1e-2)),
-        "dropout": np.clip(hparams["dropout"] + np.random.uniform(-0.05, 0.05), 0.1, 0.7)
+        "dropout": np.clip(hparams["dropout"] + np.random.uniform(-0.08, 0.08), 0.1, 0.7)
     }
 
 
@@ -54,12 +55,22 @@ def exploit_and_explore(population):
     worst_model = population[-1]
 
     if worst_model.best_val_auc < top_model.best_val_auc:
+        # Copy weights from best model
         worst_model.model.load_state_dict(copy.deepcopy(top_model.checkpoint))
+
+        # Mutate hyperparameters
         new_hparams = mutate_hyperparams(top_model.hyperparams)
-        worst_model.__init__(new_hparams, worst_model.device,
-                             worst_model.train_loader.dataset.data_dir,
-                             worst_model.train_loader.dataset.labels_csv,
-                             worst_model.batch_size)
+        worst_model.hyperparams = new_hparams
+
+        # Update optimizer learning rate and weight decay directly
+        for param_group in worst_model.optimizer.param_groups:
+            param_group['lr'] = new_hparams['learning_rate']
+            param_group['weight_decay'] = new_hparams['weight_decay']
+
+        # Update dropout layers in-place
+        worst_model.model.update_dropout(new_hparams['dropout'])
+        # Optional: You can instead pass new dropout into MRNet3 and rewrap if needed
+        # But ideally you avoid reinitializing model for consistency
 
 
 def pbt_train(args):
@@ -77,9 +88,9 @@ def pbt_train(args):
     population = []
     for _ in range(args.population):
         init_hparams = {
-            "learning_rate": np.random.uniform(1e-4, 1e-2),
-            "weight_decay": np.random.uniform(1e-5, 1e-3),
-            "dropout": np.random.uniform(0.3, 0.6)
+            "learning_rate": np.random.uniform(0.5e-5, 1.5e-5),
+            "dropout": np.random.uniform(0.1, 0.2),
+            "weight_decay": np.random.uniform(0.001, 0.004)
         }
         member = PBTMember(init_hparams, device, args.data_dir, args.labels_csv, args.batch_size)
         population.append(member)

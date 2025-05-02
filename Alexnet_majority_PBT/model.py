@@ -5,7 +5,7 @@ from torchvision.models import AlexNet_Weights
 
 class MRNet3(nn.Module):
     
-    def __init__(self,  dropout=0.15, use_batchnorm=True):
+    def __init__(self,  dropout=0.15, use_batchnorm=True, use_groupnorm=False):
         super().__init__()
         self.model1 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
         self.model2 = models.alexnet(weights=AlexNet_Weights.DEFAULT)
@@ -22,24 +22,38 @@ class MRNet3(nn.Module):
 
         classifier_layers_axial = [nn.Linear(256, 256)]
         if self.use_batchnorm:
-            classifier_layers_axial.append(nn.BatchNorm1d(256))
+            if use_groupnorm:
+                classifier_layers_axial.append(nn.GroupNorm(num_groups=16, num_channels=256))
+            else:
+                classifier_layers_axial.append(nn.BatchNorm1d(256))
         self.classifier1_axial = nn.Sequential(*classifier_layers_axial)
 
         classifier_layers_coronal = [nn.Linear(256, 256)]
         if self.use_batchnorm:
-            classifier_layers_coronal.append(nn.BatchNorm1d(256))
+            if use_groupnorm:
+                classifier_layers_coronal.append(nn.GroupNorm(num_groups=16, num_channels=256))
+            else:
+                classifier_layers_coronal.append(nn.BatchNorm1d(256))
         self.classifier1_coronal = nn.Sequential(*classifier_layers_coronal)
 
         classifier_layers_sagittal = [nn.Linear(256, 256)]
         if self.use_batchnorm:
-            classifier_layers_sagittal.append(nn.BatchNorm1d(256))
+            if use_groupnorm:
+                classifier_layers_sagittal.append(nn.GroupNorm(num_groups=16, num_channels=256))
+            else:
+                classifier_layers_sagittal.append(nn.BatchNorm1d(256))
         self.classifier1_sagittal = nn.Sequential(*classifier_layers_sagittal)
-
 
         # Separate classifier2 for each view
         self.classifier2_axial = nn.Linear(256, 1)
         self.classifier2_coronal = nn.Linear(256, 1)
         self.classifier2_sagittal = nn.Linear(256, 1)
+
+    #To allow PBT to mutate dropout as well without scheduler reinitialisation
+    def update_dropout(self, new_dropout):
+        self.dropout_view1.p = new_dropout
+        self.dropout_view2.p = new_dropout
+        self.dropout_view3.p = new_dropout
 
 
     #New forward pass to deal with batch normalisation

@@ -12,7 +12,8 @@ from model import MRNet3
 
 
 class PBTMember:
-    def __init__(self, hyperparams, device, data_dir, labels_csv, batch_size):
+    def __init__(self, id, hyperparams, device, data_dir, labels_csv, batch_size):
+        self.id = id
         self.hyperparams = hyperparams
         self.device = device
         self.batch_size = batch_size
@@ -35,9 +36,12 @@ class PBTMember:
         self.best_val_auc = 0.0
         self.checkpoint = None
 
+        #log mutations
+        self.copied_from = None
+
 
 def mutate_hyperparams(hparams):
-    def mutate(value, factor_range=(0.8, 1.2), bounds=(1e-6, 1.0)):
+    def mutate(value, factor_range=(0.7, 1.3), bounds=(1e-6, 1.0)):
         factor = np.random.uniform(*factor_range)
         new_value = value * factor
         return max(min(new_value, bounds[1]), bounds[0])
@@ -45,32 +49,41 @@ def mutate_hyperparams(hparams):
     return {
         "learning_rate": mutate(hparams["learning_rate"], bounds=(1e-6, 1e-3)),
         "weight_decay": mutate(hparams["weight_decay"], bounds=(1e-6, 1e-2)),
-        "dropout": np.clip(hparams["dropout"] + np.random.uniform(-0.08, 0.08), 0.1, 0.7)
+        "dropout": np.clip(hparams["dropout"] + np.random.uniform(-0.1, 0.1), 0.05, 0.7)
     }
 
 
 def exploit_and_explore(population):
+    import numpy as np
+    # sort so best‐performers are first
     population.sort(key=lambda m: m.best_val_auc, reverse=True)
-    top_model = population[0]
-    worst_model = population[-1]
+    top_k    = population[:2]   # two strongest
+    bottom_k = population[-1:]  # only the single weakest
 
-    if worst_model.best_val_auc < top_model.best_val_auc:
-        # Copy weights from best model
-        worst_model.model.load_state_dict(copy.deepcopy(top_model.checkpoint))
+    # build a softmax over the top2’s AUCs
+    aucs  = np.array([m.best_val_auc for m in top_k])
+    probs = np.exp(aucs) / np.sum(np.exp(aucs))
 
-        # Mutate hyperparameters
-        new_hparams = mutate_hyperparams(top_model.hyperparams)
-        worst_model.hyperparams = new_hparams
+    for target in bottom_k:
+        parent = np.random.choice(top_k, p=probs)
+        if target.best_val_auc < parent.best_val_auc:
+            # 1) copy _only_ the weights
+            target.model.load_state_dict(copy.deepcopy(parent.checkpoint))
 
-        # Update optimizer learning rate and weight decay directly
-        for param_group in worst_model.optimizer.param_groups:
-            param_group['lr'] = new_hparams['learning_rate']
-            param_group['weight_decay'] = new_hparams['weight_decay']
+            # Log lineage
+            target.copied_from = parent.id
+            
+            # 2) compute new hyperparams
+            new_h = mutate_hyperparams(parent.hyperparams)
+            target.hyperparams = new_h
 
-        # Update dropout layers in-place
-        worst_model.model.update_dropout(new_hparams['dropout'])
-        # Optional: You can instead pass new dropout into MRNet3 and rewrap if needed
-        # But ideally you avoid reinitializing model for consistency
+            # 3) update optimizer _in place_
+            for pg in target.optimizer.param_groups:
+                pg['lr']           = new_h['learning_rate']
+                pg['weight_decay'] = new_h['weight_decay']
+
+            # 4) update dropout _in place_
+            target.model.update_dropout(new_h['dropout'])
 
 
 def pbt_train(args):
@@ -86,20 +99,21 @@ def pbt_train(args):
     log_path = Path(args.rundir) / "population_log.jsonl"
 
     population = []
-    for _ in range(args.population):
+    for i in range(args.population):
         init_hparams = {
-            "learning_rate": np.random.uniform(0.5e-5, 1.5e-5),
-            "dropout": np.random.uniform(0.1, 0.2),
-            "weight_decay": np.random.uniform(0.001, 0.004)
+            "learning_rate": np.random.uniform(0.5e-5, 2e-5),
+            "weight_decay": np.random.uniform(0.001, 0.004),
+            "dropout": np.random.uniform(0.1, 0.3)
         }
-        member = PBTMember(init_hparams, device, args.data_dir, args.labels_csv, args.batch_size)
+        member = PBTMember(i, init_hparams, device, args.data_dir, args.labels_csv, args.batch_size)
         population.append(member)
 
     for epoch in range(args.epochs):
         print(f"Epoch {epoch+1}/{args.epochs}")
         epoch_logs = []
 
-        for i, member in enumerate(population):
+        for member in population:
+
             train_loss, train_auc, _, _ = run_model(member.model, member.train_loader, train=True, optimizer=member.optimizer, eps=args.eps)
             val_loss, val_auc, _, _ = run_model(member.model, member.val_loader, train=False)
             member.scheduler.step(val_loss)
@@ -110,7 +124,8 @@ def pbt_train(args):
 
             log_entry = {
                 "epoch": epoch + 1,
-                "model_id": i,
+                "copied_from": getattr(member, 'copied_from', None),
+                "model_id": member.id,
                 "learning_rate": member.hyperparams["learning_rate"],
                 "weight_decay": member.hyperparams["weight_decay"],
                 "dropout": member.hyperparams["dropout"],
@@ -124,10 +139,16 @@ def pbt_train(args):
             for entry in epoch_logs:
                 f.write(json.dumps(entry) + '\n')
 
+        # Clear lineage flags so they don't persist beyond this epoch
+        for member in population:
+            if hasattr(member, 'copied_from'):
+                del member.copied_from
+
         # Print only the best model AUCs
         best_model = max(epoch_logs, key=lambda x: x['val_auc'])
         print(f"Best Model {best_model['model_id']}: train_auc={best_model['train_auc']:.4f}, val_auc={best_model['val_auc']:.4f}")
 
+        # Exploit and explore after interval
         if (epoch + 1) % args.eval_interval == 0:
             exploit_and_explore(population)
 
@@ -136,7 +157,6 @@ def pbt_train(args):
     torch.save(best_model.checkpoint, Path(args.rundir) / 'best_model.pth')
     with open(Path(args.rundir) / 'best_hyperparams.json', 'w') as f:
         json.dump(best_model.hyperparams, f, indent=2)
-
 
 def get_parser():
     parser = argparse.ArgumentParser()
